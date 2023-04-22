@@ -4,6 +4,7 @@
 #include <random.h>
 #include <stdio.h>
 #include <string.h>
+#include "limits.h" // unsigned long long의 최댓값을 사용하기 위해 include
 #include "threads/flags.h"
 #include "threads/interrupt.h"
 #include "threads/intr-stubs.h"
@@ -24,9 +25,15 @@
    Do not modify this value. */
 #define THREAD_BASIC 0xd42df210
 
+#define MIN(a, b) ((a) > (b) ? (b) : (a))
+
 /* List of processes in THREAD_READY state, that is, processes
    that are ready to run but not actually running. */
 static struct list ready_list;
+
+/* pjt1 */
+static struct list wait_list;
+static unsigned long long min_time_in_wait;
 
 /* Idle thread. */
 static struct thread *idle_thread;
@@ -62,6 +69,7 @@ static void init_thread (struct thread *, const char *name, int priority);
 static void do_schedule(int status);
 static void schedule (void);
 static tid_t allocate_tid (void);
+
 
 /* Returns true if T appears to point to a valid thread. */
 #define is_thread(t) ((t) != NULL && (t)->magic == THREAD_MAGIC)
@@ -99,6 +107,8 @@ thread_init (void) {
 	/* Reload the temporal gdt for the kernel
 	 * This gdt does not include the user context.
 	 * The kernel will rebuild the gdt with user context, in gdt_init (). */
+
+	/* checkpoint : 이게 뭐임? */
 	struct desc_ptr gdt_ds = {
 		.size = sizeof (gdt) - 1,
 		.address = (uint64_t) gdt
@@ -110,8 +120,15 @@ thread_init (void) {
 	list_init (&ready_list);
 	list_init (&destruction_req);
 
+	/* pjt1 : 대기열과 대기열의 최소 시간값 초기화 */
+	list_init(&wait_list);
+	min_time_in_wait = ULLONG_MAX;
+
 	/* Set up a thread structure for the running thread. */
-	initial_thread = running_thread ();
+	initial_thread = running_thread (); 
+	// checkpoint : 어떻게 스레딩 시스템을 초기화하는 과정에서, running thread가 있을 수 있나요?? 
+	// initial_thread가 NULL이면 바로 다음의 init_thread에서 NULL이 아님을 ASSERT하기 때문에, 해당 값이 NULL이 아니라는 것은 알겠는데,
+	// 그럼 무슨값??
 	init_thread (initial_thread, "main", PRI_DEFAULT);
 	initial_thread->status = THREAD_RUNNING;
 	initial_thread->tid = allocate_tid ();
@@ -529,7 +546,8 @@ static void
 do_schedule(int status) {
 	ASSERT (intr_get_level () == INTR_OFF);
 	ASSERT (thread_current()->status == THREAD_RUNNING);
-	while (!list_empty (&destruction_req)) {
+	// 현재 삭제 요청 큐에 있는 스레드들을 지움 - 이미 삭제요청 들어온이후
+	while (!list_empty (&destruction_req)) { 
 		struct thread *victim =
 			list_entry (list_pop_front (&destruction_req), struct thread, elem);
 		palloc_free_page(victim);
@@ -557,7 +575,7 @@ schedule (void) {
 	process_activate (next);
 #endif
 
-	if (curr != next) {
+	if (curr != next) { // checkpoint : 이게뭐임?
 		/* If the thread we switched from is dying, destroy its struct
 		   thread. This must happen late so that thread_exit() doesn't
 		   pull out the rug under itself.
@@ -566,13 +584,13 @@ schedule (void) {
 		   The real destruction logic will be called at the beginning of the
 		   schedule(). */
 		if (curr && curr->status == THREAD_DYING && curr != initial_thread) {
-			ASSERT (curr != next);
+			ASSERT (curr != next); // checkpoint : 이게뭐임?
 			list_push_back (&destruction_req, &curr->elem);
 		}
 
 		/* Before switching the thread, we first save the information
 		 * of current running. */
-		thread_launch (next);
+		thread_launch (next); // 다음 스레드를 활성화
 	}
 }
 
@@ -588,3 +606,61 @@ allocate_tid (void) {
 
 	return tid;
 }
+
+
+/* pjt1: 쓰레드 재우기 */
+int thread_sleep(int64_t ticks)
+{
+	enum intr_level old_level;
+
+	// 커널 스레드인지 확인?
+	struct thread *curr = thread_current(); // 재울 쓰레드
+	if (curr == idle_thread) {
+		return -1;
+	}
+
+	// 인터럽트 끄기?
+	old_level = intr_disable ();
+
+	// 스레드의 상태를 변경하고 다음 쓰레드로 넘어가줌
+	thread_block(); 
+
+	// 스레드가 일어나는 시간을 기록
+	curr->wake_time = ticks;
+
+	// wait_list에 삽입
+	list_push_back(&wait_list, &(curr->elem));
+
+	// wait_list의 최소값 업데이트 
+	min_time_in_wait = MIN(min_time_in_wait, ticks);
+
+	intr_set_level(old_level); // 인터럽트 다시 킴
+
+	return 0;
+}
+
+unsigned long long get_min_time()
+{
+	return min_time_in_wait;
+}
+
+int thread_awake(ticks)
+{
+	struct list_elem *e = list_head(&wait_list);
+	unsigned long long new_min = ULLONG_MAX; 
+
+	for (e; e != list_tail(&wait_list); e=e->next) 
+	{
+		struct thread *curr = list_entry(e, struct thread, elem);
+		if (curr->wake_time <= ticks) { // elem이 쓰레드구조체에서 elem의 이름
+			thread_unblock(curr); // ready 큐에 넣어주고 
+			list_remove(e); // wait 큐에서 삭제
+		} else {
+			// 새로운 리스트의 최소 wake 시간값 찾기
+			new_min = MIN(new_min, curr);
+		}
+	} 
+
+	min_time_in_wait = new_min; // 업데이트
+}
+

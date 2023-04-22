@@ -95,6 +95,8 @@ struct thread {
 	/* Shared between thread.c and synch.c. */
 	struct list_elem elem;              /* List element. */
 
+	unsigned long long wake_time; // 깨어나는 절대 시간 
+
 #ifdef USERPROG
 	/* Owned by userprog/process.c. */
 	uint64_t *pml4;                     /* Page map level 4 */
@@ -140,6 +142,11 @@ int thread_get_nice (void);
 void thread_set_nice (int);
 int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
+
+/* pjt1 */
+int thread_sleep(int64_t ticks);
+unsigned long long get_min_time();
+int thread_awake(ticks);
 
 void do_iret (struct intr_frame *tf);
 
