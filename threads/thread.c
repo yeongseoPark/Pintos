@@ -615,24 +615,26 @@ int thread_sleep(int64_t ticks)
 
 	// 커널 스레드인지 확인?
 	struct thread *curr = thread_current(); // 재울 쓰레드
-	if (curr == idle_thread) {
-		return -1;
-	}
 
 	// 인터럽트 끄기?
 	old_level = intr_disable ();
 
 	// 스레드의 상태를 변경하고 다음 쓰레드로 넘어가줌
-	thread_block(); 
+	// thread_block(); 
 
 	// 스레드가 일어나는 시간을 기록
 	curr->wake_time = ticks;
 
 	// wait_list에 삽입
-	list_push_back(&wait_list, &(curr->elem));
+	if (curr != idle_thread) 
+	{
+		list_push_back(&wait_list, &(curr->elem));
+	}
 
 	// wait_list의 최소값 업데이트 
 	min_time_in_wait = MIN(min_time_in_wait, ticks);
+
+	do_schedule(THREAD_BLOCKED); // checkpoint2 : 인터럽트가 꺼져있는지 assert로 확인해주기 때문에 여기서 실행
 
 	intr_set_level(old_level); // 인터럽트 다시 킴
 
@@ -646,21 +648,24 @@ unsigned long long get_min_time()
 
 int thread_awake(ticks)
 {
-	struct list_elem *e = list_head(&wait_list);
-	unsigned long long new_min = ULLONG_MAX; 
+	struct list_elem *e = list_begin(&wait_list);
+	unsigned long long new_min = ULLONG_MAX; // buggy!
+	struct thread *curr; 
 
-	for (e; e != list_tail(&wait_list); e=e->next) 
+	// e = list_next(e);
+	while (e != list_tail(&wait_list)) 
 	{
-		struct thread *curr = list_entry(e, struct thread, elem);
+		curr = list_entry(e, struct thread, elem);
 		if (curr->wake_time <= ticks) { // elem이 쓰레드구조체에서 elem의 이름
-			thread_unblock(curr); // ready 큐에 넣어주고 
-			list_remove(e); // wait 큐에서 삭제
+			e = list_remove(&curr->elem); 	  		// wait 큐에서 삭제
+			thread_unblock(curr); 		// ready 큐에 넣어주고 
 		} else {
 			// 새로운 리스트의 최소 wake 시간값 찾기
-			new_min = MIN(new_min, curr);
+			new_min = MIN(new_min, curr->wake_time);
+			min_time_in_wait = new_min; // 업데이트
+			e = list_next(e);
 		}
 	} 
-
-	min_time_in_wait = new_min; // 업데이트
 }
+
 
