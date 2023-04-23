@@ -95,7 +95,7 @@ struct thread {
 	/* Shared between thread.c and synch.c. */
 	struct list_elem elem;              /* List element. */
 
-	unsigned long long wake_time; // 깨어나는 절대 시간 
+	int64_t wake_time; // 깨어나는 절대 시간 
 
 #ifdef USERPROG
 	/* Owned by userprog/process.c. */

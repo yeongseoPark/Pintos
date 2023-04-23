@@ -33,7 +33,7 @@ static struct list ready_list;
 
 /* pjt1 */
 static struct list wait_list;
-static unsigned long long min_time_in_wait;
+static int64_t min_time_in_wait;
 
 /* Idle thread. */
 static struct thread *idle_thread;
@@ -122,7 +122,7 @@ thread_init (void) {
 
 	/* pjt1 : 대기열과 대기열의 최소 시간값 초기화 */
 	list_init(&wait_list);
-	min_time_in_wait = ULLONG_MAX;
+	min_time_in_wait = INT64_MAX;
 
 	/* Set up a thread structure for the running thread. */
 	initial_thread = running_thread (); 
@@ -649,11 +649,11 @@ unsigned long long get_min_time()
 int thread_awake(ticks)
 {
 	struct list_elem *e = list_begin(&wait_list);
-	unsigned long long new_min = ULLONG_MAX; // buggy!
+	int64_t new_min = INT64_MAX; // buggy!
 	struct thread *curr; 
 
 	// e = list_next(e);
-	while (e != list_tail(&wait_list)) 
+	for (e; e != list_tail(&wait_list);) 
 	{
 		curr = list_entry(e, struct thread, elem);
 		if (curr->wake_time <= ticks) { // elem이 쓰레드구조체에서 elem의 이름

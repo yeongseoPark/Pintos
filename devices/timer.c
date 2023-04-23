@@ -98,6 +98,7 @@ timer_sleep (int64_t ticks) {
 		// thread_yield ();
 
 	/* pjt1 : 현재 쓰레드를 wait list에 넣기 */
+	ASSERT (intr_get_level () == INTR_ON);
 	thread_sleep(start + ticks);
 }
 
@@ -131,7 +132,7 @@ timer_interrupt (struct intr_frame *args UNUSED) {
 	ticks++;
 	thread_tick (); // 출력용
 	
-	unsigned long long cur_min_time = get_min_time();
+	int64_t cur_min_time = get_min_time();
 
 	if (ticks >= cur_min_time) 
 	{
