@@ -641,7 +641,7 @@ int thread_sleep(int64_t ticks)
 	return 0;
 }
 
-unsigned long long get_min_time()
+int64_t get_min_time()
 {
 	return min_time_in_wait;
 }

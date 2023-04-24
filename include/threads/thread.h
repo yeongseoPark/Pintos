@@ -145,7 +145,7 @@ int thread_get_load_avg (void);
 
 /* pjt1 */
 int thread_sleep(int64_t ticks);
-unsigned long long get_min_time();
+int64_t get_min_time();
 int thread_awake(ticks);
 
 void do_iret (struct intr_frame *tf);
