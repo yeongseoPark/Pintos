@@ -646,7 +646,7 @@ int64_t get_min_time()
 	return min_time_in_wait;
 }
 
-int thread_awake(ticks)
+int thread_awake(int64_t ticks)
 {
 	struct list_elem *e = list_begin(&wait_list);
 	int64_t new_min = INT64_MAX; // buggy!
