@@ -48,9 +48,6 @@ static struct lock tid_lock;
 /* Thread destruction requests */
 static struct list destruction_req;
 
-struct thread *thread_a;
-struct thread *thread_b;
-
 /* Statistics. */
 static long long idle_ticks;    /* # of timer ticks spent idle. */
 static long long kernel_ticks;  /* # of timer ticks in kernel threads. */
@@ -230,18 +227,19 @@ thread_create (const char *name, int priority,
 	/* Add to run queue. */
 	thread_unblock (t);
 
+	/* -----> 이렇게 되면 unblock과 test_max_priority에서 해야할 일을 두번해주게 됨!! */
 	/* Priority Scheduling - 생성된 스레드의 우선순위가 현재 실행중인 스레드의 우선순위보다 높다면, CPU를 양보 */
-	struct thread *curr = thread_current();
+	// struct thread *curr = thread_current();
 	
-	// 두 번째 인자 t의 elem은 현재 초기화되어 있지 않은 상태(미확인), 인수 맞나 확인 필요
-	list_insert_ordered(&ready_list, &t->elem, &cmp_priority, NULL);
+	// // 두 번째 인자 t의 elem은 현재 초기화되어 있지 않은 상태(미확인), 인수 맞나 확인 필요
+	// list_insert_ordered(&ready_list, &t->elem, &cmp_priority, NULL);
 
-	// 우선순위를 먼저 비교하고 현재 실행하는 쓰레드의 우선 순위가 낮다면
-	if (curr->priority < priority) 
-	{
-		// 일단 현재 쓰레드가 실행권한을 양보한다.
-		thread_yield();
-	}
+	// // 우선순위를 먼저 비교하고 현재 실행하는 쓰레드의 우선 순위가 낮다면
+	// if (curr->priority < priority) 
+	// {
+	// 	// 일단 현재 쓰레드가 실행권한을 양보한다.
+	// 	thread_yield();
+	// }
 
 	test_max_priority();
 
@@ -252,8 +250,8 @@ bool cmp_priority (const struct list_elem *a,
                              const struct list_elem *b,
                              void *aux UNUSED) {
 	// thread a, b가 전역 변수로 선언?
-	thread_a = list_entry(a, struct thread, elem);
-	thread_b = list_entry(b, struct thread, elem);
+	struct thread *thread_a = list_entry(a, struct thread, elem);
+struct thread *thread_b = list_entry(b, struct thread, elem);
 
 	if ((thread_a->priority) > (thread_b->priority)) 
 	{
