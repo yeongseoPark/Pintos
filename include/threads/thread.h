@@ -152,6 +152,6 @@ void do_iret (struct intr_frame *tf);
 
 bool cmp_priority (const struct list_elem *a,
                              const struct list_elem *b,
-                             void *aux);
+                             void *aux UNUSED);
 
 #endif /* threads/thread.h */

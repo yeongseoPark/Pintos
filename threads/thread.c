@@ -48,6 +48,9 @@ static struct lock tid_lock;
 /* Thread destruction requests */
 static struct list destruction_req;
 
+struct thread *thread_a;
+struct thread *thread_b;
+
 /* Statistics. */
 static long long idle_ticks;    /* # of timer ticks spent idle. */
 static long long kernel_ticks;  /* # of timer ticks in kernel threads. */
@@ -231,7 +234,7 @@ thread_create (const char *name, int priority,
 	struct thread *curr = thread_current();
 	
 	// 두 번째 인자 t의 elem은 현재 초기화되어 있지 않은 상태(미확인), 인수 맞나 확인 필요
-	list_insert_ordered(&ready_list, &(t->elem), &cmp_priority, NULL);
+	list_insert_ordered(&ready_list, &t->elem, &cmp_priority, NULL);
 
 	// 우선순위를 먼저 비교하고 현재 실행하는 쓰레드의 우선 순위가 낮다면
 	if (curr->priority < priority) 
@@ -247,20 +250,19 @@ thread_create (const char *name, int priority,
 
 bool cmp_priority (const struct list_elem *a,
                              const struct list_elem *b,
-                             void *aux) {
-	struct thread *thread_a = list_entry(a, struct thread, elem);
-	struct thread *thread_b = list_entry(b, struct thread, elem);
+                             void *aux UNUSED) {
+	// thread a, b가 전역 변수로 선언?
+	thread_a = list_entry(a, struct thread, elem);
+	thread_b = list_entry(b, struct thread, elem);
 
-	if (thread_a->priority > thread_b->priority) 
+	if ((thread_a->priority) > (thread_b->priority)) 
 	{
-		return 1;
+		return true;
 	} 
 	else 
 	{
-		return 0;
+		return false;
 	}
-	
-
 }
 
 /* Puts the current thread to sleep.  It will not be scheduled
@@ -299,7 +301,7 @@ thread_unblock (struct thread *t) {
 	// 단순히 ready-list 뒤에 넣는게 아니라, 우선순위순으로 넣어주면 됨
 	// insert_ordered 써주면 될듯
 
-	list_insert_ordered(t, &t->elem, &cmp_priority, NULL);
+	list_insert_ordered(&ready_list , &t->elem, &cmp_priority, NULL);
 
 	t->status = THREAD_READY;
 	intr_set_level (old_level);
@@ -341,7 +343,7 @@ void
 thread_exit (void) {
 	ASSERT (!intr_context ());
 
-#ifdef USERPROG
+#ifdef USERPRO
 	process_exit ();
 #endif
 
@@ -363,7 +365,9 @@ thread_yield (void) {
 
 	old_level = intr_disable ();
 	if (curr != idle_thread)
-		list_insert_ordered(curr, &curr->elem, &cmp_priority, NULL);
+	{
+		list_insert_ordered(&ready_list, &curr->elem, &cmp_priority, NULL);
+	}
 		// list_push_back (&ready_list, &curr->elem);
 
 		// unblock과 마찬가지로, ready_list에 정렬된 채로 넣어줘야 함
@@ -376,6 +380,11 @@ thread_yield (void) {
 void
 thread_set_priority (int new_priority) {
 	thread_current ()->priority = new_priority;
+
+	// 우선 순위 재정렬
+	// list_sort(&ready_list, &cmp_priority, NULL);
+
+	test_max_priority();
 }
 
 /* Returns the current thread's priority. */
@@ -722,6 +731,20 @@ int thread_awake(int64_t ticks)
 * ready_list 비어있는지 체크
 */
 void test_max_priority(){
+	if (list_empty(&ready_list))
+	{
+		return;
+	}
+    
+	int run_priority = thread_current()->priority;
+	struct list_elem *e= list_begin(&ready_list);
+	struct thread *t = list_entry(e, struct thread, elem);
+    
+	if (run_priority < t->priority)
+	{
+		thread_yield();
+	}
+	/*
 	// ready_list가 비어있는지를 확인
 	if (list_empty(&ready_list)) {
 		return; 
@@ -733,15 +756,17 @@ void test_max_priority(){
 
 	if (max_thread->priority > curr->priority) 
 	{
-		/* --------- 원래 돌던애(curr) ready list로 넣어주는 코드가 필요함 ----------- */ 
-		enum intr_level old_level = intr_disable();
+		// enum intr_level old_level = intr_disable();
 
-		list_insert_ordered(curr, &curr->elem, &cmp_priority, NULL);
+		// list_insert_ordered(ready_list, &curr->elem, &cmp_priority, NULL);
 
-		do_schedule(THREAD_READY); 
-		// do_schedule은 현재 쓰레드의 상태를 READY로 바꾸고, 삭제요청 큐를 비우고, schedule() 호출.
-		// schedule()은 Ready_list 맨 앞의 쓰레드를 꺼내서 Running으로 상태 바꾸고, 페이지테이블 활성화해줌
+		// do_schedule(THREAD_READY); 
+		// // do_schedule은 현재 쓰레드의 상태를 READY로 바꾸고, 삭제요청 큐를 비우고, schedule() 호출.
+		// // schedule()은 Ready_list 맨 앞의 쓰레드를 꺼내서 Running으로 상태 바꾸고, 페이지테이블 활성화해줌
 
-		intr_set_level(old_level);
+		// intr_set_level(old_level);
+
+		thread_yield();
 	}
+	*/
 }
