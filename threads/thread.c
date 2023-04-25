@@ -32,8 +32,9 @@
 static struct list ready_list;
 
 /* pjt1 */
-static struct list wait_list;
-static int64_t min_time_in_wait;
+static struct list sleep_list;
+static struct list wait_list; // 실행대기 리스트
+static int64_t min_time_in_sleep;
 
 /* Idle thread. */
 static struct thread *idle_thread;
@@ -121,8 +122,10 @@ thread_init (void) {
 	list_init (&destruction_req);
 
 	/* pjt1 : 대기열과 대기열의 최소 시간값 초기화 */
-	list_init(&wait_list);
-	min_time_in_wait = INT64_MAX;
+	list_init(&sleep_list);
+	min_time_in_sleep = INT64_MAX;
+
+	list_init (&wait_list);
 
 	/* Set up a thread structure for the running thread. */
 	initial_thread = running_thread (); 
@@ -224,7 +227,40 @@ thread_create (const char *name, int priority,
 	/* Add to run queue. */
 	thread_unblock (t);
 
+	/* Priority Scheduling - 생성된 스레드의 우선순위가 현재 실행중인 스레드의 우선순위보다 높다면, CPU를 양보 */
+	struct thread *curr = thread_current();
+	
+	// 두 번째 인자 t의 elem은 현재 초기화되어 있지 않은 상태(미확인), 인수 맞나 확인 필요
+	list_insert_ordered(&ready_list, &(t->elem), &cmp_priority, NULL);
+
+	// 우선순위를 먼저 비교하고 현재 실행하는 쓰레드의 우선 순위가 낮다면
+	if (curr->priority < priority) 
+	{
+		// 일단 현재 쓰레드가 실행권한을 양보한다.
+		thread_yield();
+	}
+
+	test_max_priority();
+
 	return tid;
+}
+
+bool cmp_priority (const struct list_elem *a,
+                             const struct list_elem *b,
+                             void *aux) {
+	struct thread *thread_a = list_entry(a, struct thread, elem);
+	struct thread *thread_b = list_entry(b, struct thread, elem);
+
+	if (thread_a->priority > thread_b->priority) 
+	{
+		return 1;
+	} 
+	else 
+	{
+		return 0;
+	}
+	
+
 }
 
 /* Puts the current thread to sleep.  It will not be scheduled
@@ -257,7 +293,14 @@ thread_unblock (struct thread *t) {
 
 	old_level = intr_disable ();
 	ASSERT (t->status == THREAD_BLOCKED);
-	list_push_back (&ready_list, &t->elem);
+	// list_push_back (&ready_list, &t->elem);
+
+	// blocked 쓰레드를 ready 상태로 변경할때, 
+	// 단순히 ready-list 뒤에 넣는게 아니라, 우선순위순으로 넣어주면 됨
+	// insert_ordered 써주면 될듯
+
+	list_insert_ordered(t, &t->elem, &cmp_priority, NULL);
+
 	t->status = THREAD_READY;
 	intr_set_level (old_level);
 }
@@ -320,7 +363,11 @@ thread_yield (void) {
 
 	old_level = intr_disable ();
 	if (curr != idle_thread)
-		list_push_back (&ready_list, &curr->elem);
+		list_insert_ordered(curr, &curr->elem, &cmp_priority, NULL);
+		// list_push_back (&ready_list, &curr->elem);
+
+		// unblock과 마찬가지로, ready_list에 정렬된 채로 넣어줘야 함
+
 	do_schedule (THREAD_READY);
 	intr_set_level (old_level);
 }
@@ -541,7 +588,10 @@ thread_launch (struct thread *th) {
 /* Schedules a new process. At entry, interrupts must be off.
  * This function modify current thread's status to status and then
  * finds another thread to run and switches to it.
- * It's not safe to call printf() in the schedule(). */
+ * It's not safe to call printf() in the schedule().
+ * 1. 현재 쓰레드의 상태를 status로 바꾸고 -> ** list에 다시 넣어주는 코드는 없는데?
+ * 2. schedule()로 다음 쓰레드를 ready list에서 뽑아서 running으로 바꾸고 페이지테이블 활성화 
+ *  */
 static void
 do_schedule(int status) {
 	ASSERT (intr_get_level () == INTR_OFF);
@@ -625,14 +675,14 @@ int thread_sleep(int64_t ticks)
 	// 스레드가 일어나는 시간을 기록
 	curr->wake_time = ticks;
 
-	// wait_list에 삽입
+	// sleep_list에 삽입
 	if (curr != idle_thread) 
 	{
-		list_push_back(&wait_list, &(curr->elem));
+		list_push_back(&sleep_list, &(curr->elem));
 	}
 
-	// wait_list의 최소값 업데이트 
-	min_time_in_wait = MIN(min_time_in_wait, ticks);
+	// sleep_list의 최소값 업데이트 
+	min_time_in_sleep = MIN(min_time_in_sleep, ticks);
 
 	do_schedule(THREAD_BLOCKED); // checkpoint2 : 인터럽트가 꺼져있는지 assert로 확인해주기 때문에 여기서 실행
 
@@ -643,17 +693,17 @@ int thread_sleep(int64_t ticks)
 
 int64_t get_min_time()
 {
-	return min_time_in_wait;
+	return min_time_in_sleep;
 }
 
 int thread_awake(int64_t ticks)
 {
-	struct list_elem *e = list_begin(&wait_list);
+	struct list_elem *e = list_begin(&sleep_list);
 	int64_t new_min = INT64_MAX; // buggy!
 	struct thread *curr; 
 
 	// e = list_next(e);
-	for (e; e != list_tail(&wait_list);) 
+	for (e; e != list_tail(&sleep_list);) 
 	{
 		curr = list_entry(e, struct thread, elem);
 		if (curr->wake_time <= ticks) { // elem이 쓰레드구조체에서 elem의 이름
@@ -662,10 +712,36 @@ int thread_awake(int64_t ticks)
 		} else {
 			// 새로운 리스트의 최소 wake 시간값 찾기
 			new_min = MIN(new_min, curr->wake_time);
-			min_time_in_wait = new_min; // 업데이트
+			min_time_in_sleep = new_min; // 업데이트
 			e = list_next(e);
 		}
 	} 
 }
 
+/* ready_list의 가장 높은 스레드와 현재 스레드의 우선순위를 비교하여 스케줄링
+* ready_list 비어있는지 체크
+*/
+void test_max_priority(){
+	// ready_list가 비어있는지를 확인
+	if (list_empty(&ready_list)) {
+		return; 
+	}
 
+	// ready_list가 내림차순임을 가정한다.
+	struct thread *max_thread = list_entry(list_begin(&ready_list), struct thread, elem);
+	struct thread *curr = thread_current();
+
+	if (max_thread->priority > curr->priority) 
+	{
+		/* --------- 원래 돌던애(curr) ready list로 넣어주는 코드가 필요함 ----------- */ 
+		enum intr_level old_level = intr_disable();
+
+		list_insert_ordered(curr, &curr->elem, &cmp_priority, NULL);
+
+		do_schedule(THREAD_READY); 
+		// do_schedule은 현재 쓰레드의 상태를 READY로 바꾸고, 삭제요청 큐를 비우고, schedule() 호출.
+		// schedule()은 Ready_list 맨 앞의 쓰레드를 꺼내서 Running으로 상태 바꾸고, 페이지테이블 활성화해줌
+
+		intr_set_level(old_level);
+	}
+}
