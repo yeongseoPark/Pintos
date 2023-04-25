@@ -382,6 +382,10 @@ thread_set_priority (int new_priority) {
 	// 우선 순위 재정렬
 	// list_sort(&ready_list, &cmp_priority, NULL);
 
+	refresh_priority();
+
+	donate_priority();
+
 	test_max_priority();
 }
 
@@ -480,6 +484,13 @@ init_thread (struct thread *t, const char *name, int priority) {
 	t->tf.rsp = (uint64_t) t + PGSIZE - sizeof (void *);
 	t->priority = priority;
 	t->magic = THREAD_MAGIC;
+
+	// Donation 관련 인자들 초기화
+	t->init_priority = priority;
+	t->wait_on_lock = NULL;
+	list_init(&t->donations);
+	// list_elem 초기화 방법 모름, 안해줘도 되는 듯하지만 확인 필요
+	// -> list_init에서 해줌
 }
 
 /* Chooses and returns the next thread to be scheduled.  Should
@@ -729,8 +740,7 @@ int thread_awake(int64_t ticks)
 * ready_list 비어있는지 체크
 */
 void test_max_priority(){
-	if (list_empty(&ready_list))
-	{
+	if (list_empty(&ready_list)) {
 		return;
 	}
     
@@ -738,33 +748,50 @@ void test_max_priority(){
 	struct list_elem *e= list_begin(&ready_list);
 	struct thread *t = list_entry(e, struct thread, elem);
     
-	if (run_priority < t->priority)
-	{
+	if (run_priority < t->priority) {
 		thread_yield();
 	}
-	/*
-	// ready_list가 비어있는지를 확인
-	if (list_empty(&ready_list)) {
-		return; 
-	}
+}
 
-	// ready_list가 내림차순임을 가정한다.
-	struct thread *max_thread = list_entry(list_begin(&ready_list), struct thread, elem);
+void donate_priority() {
+	// 현재 스레드가 기다리고 있는 lock과 연결된 모든 스레드를 순회
+	// 현재 스레드의 우선 순위를 lock을 보유하고 있는 스레드에게 기부
+
 	struct thread *curr = thread_current();
+	struct list *donated = &curr->donations;
+	struct list_elem *e;
 
-	if (max_thread->priority > curr->priority) 
-	{
-		// enum intr_level old_level = intr_disable();
+	int count = 0;
 
-		// list_insert_ordered(ready_list, &curr->elem, &cmp_priority, NULL);
+	for (e = list_begin(donated); e != list_tail(donated); e = list_next(e)) {
+		count += 1;
+		if (count >= 8) break;
 
-		// do_schedule(THREAD_READY); 
-		// // do_schedule은 현재 쓰레드의 상태를 READY로 바꾸고, 삭제요청 큐를 비우고, schedule() 호출.
-		// // schedule()은 Ready_list 맨 앞의 쓰레드를 꺼내서 Running으로 상태 바꾸고, 페이지테이블 활성화해줌
-
-		// intr_set_level(old_level);
-
-		thread_yield();
+		struct thread *donated_thread = list_entry(e, struct thread, elem);
+		curr->priority = donated_thread->priority;
 	}
-	*/
+}
+
+// lock 해지 했을 때 donations 리스트에서 해당 엔트리를 삭제하기 위한 함수
+void remove_with_lock(struct lock *lock) {
+	// 현재 스레드의 donations 리스트 확인
+	// 해지할 lock을 보유하고 있는 엔트리를 삭제
+	list_remove(&lock->holder->donation_elem);
+}
+
+// 스레드의 우선순위가 변경 되었을 때 donation을 고려하여
+// 우선 순위를 다시 결정하는 함수
+void refresh_priority(void) {
+	// 현재 스레드의 우선순위를 기부받기 전의 우선순위로 변경
+	struct thread *curr = thread_current();
+	curr->priority = curr->init_priority;
+
+	// 우선 순위가 가장 높은 donations 리스트의 스레드와
+	// 현재 스레드의 우선 순위를 비교하여 높은 값을 현재 스레드의 우선순위로 설정
+	struct list_elem *e= list_begin(&curr->donations);
+	struct thread *t = list_entry(e, struct thread, elem);
+
+	if (t->priority > curr->priority) {
+		curr->priority = t->priority;
+	}
 }

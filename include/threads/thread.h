@@ -95,7 +95,12 @@ struct thread {
 	/* Shared between thread.c and synch.c. */
 	struct list_elem elem;              /* List element. */
 
-	int64_t wake_time; // 깨어나는 절대 시간 
+	int64_t wake_time; // 깨어나는 절대 시간
+
+	int init_priority;
+	struct lock *wait_on_lock;
+	struct list donations;
+	struct list_elem donation_elem;
 
 #ifdef USERPROG
 	/* Owned by userprog/process.c. */
@@ -153,5 +158,9 @@ void do_iret (struct intr_frame *tf);
 bool cmp_priority (const struct list_elem *a,
                              const struct list_elem *b,
                              void *aux UNUSED);
+
+void donate_priority(void);
+void remove_with_lock(struct lock *lock);
+void refresh_priority(void);
 
 #endif /* threads/thread.h */
