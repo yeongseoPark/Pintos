@@ -1,5 +1,5 @@
 FAIL
-Kernel panic in run: PANIC at ../../tests/threads/tests.c:60 in run_test(): no test named "priority-donate-one"
+Kernel panic in run: PANIC at ../../tests/threads/tests.c:60 in run_test(): no test named "mlfqs-block"
 Call stack: 0x80042134e9 0x8004216997 0x8004206636 0x8004206783 0x8004206120
 Translation of call stack:
 0x00000080042134e9: debug_panic (lib/kernel/debug.c:32)
