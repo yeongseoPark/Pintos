@@ -208,12 +208,7 @@ lock_acquire (struct lock *lock) {
 		// 현재 스레드의 wait_on_lock 변수에 기다리는 lock의 주소 저장
 		curr->wait_on_lock = lock;
 
-		// Multiple Donation: 이전 상태의 우선순위를 기억,
-		// curr->init_priority = curr->priority;
-		// lock->holder->init_priority = lock->holder->priority;
-
-		// donation을 받은 스레드의 thread 구조체를 리스트로 관리
-		// list_insert_ordered(&curr->donations, &lock->holder->donation_elem, &cmp_sem_priority, NULL);
+		// Multiple Donation: 이전 상태의 우선순위를 기억
 		list_push_back(&lock->holder->donations, &curr->donation_elem);
 
 		// Priority Donation 수행
