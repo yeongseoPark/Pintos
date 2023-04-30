@@ -743,7 +743,7 @@ int thread_awake(int64_t ticks)
 * ready_list 비어있는지 체크
 */
 void test_max_priority(){
-	if (list_empty(&ready_list)) {
+	if (list_empty(&ready_list) || intr_context()) {
 		return;
 	}
     

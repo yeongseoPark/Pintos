@@ -22,14 +22,24 @@
 #include "vm/vm.h"
 #endif
 
+// ******************************LINE ADDED****************************** //
+// Project 2-1 : User Programs - Argument Passing
+#define EOL sizeof("") // Size of Sentinel
+#define SAU 8 // Stack Pointer Alignment Unit = 8 byte
+// *************************ADDED LINE ENDS HERE************************* //
+
 static void process_cleanup (void);
 static bool load (const char *file_name, struct intr_frame *if_);
 static void initd (void *f_name);
 static void __do_fork (void *);
 
+// ******************************LINE ADDED****************************** //
+// Project 2-1 : User Programs - Argument Passing
+void argument_stack(char **argv, int argc, struct intr_frame *if_);
+// *************************ADDED LINE ENDS HERE************************* //
+
 /* General process initializer for initd and other process. */
-static void
-process_init (void) {
+static void process_init (void) {
 	struct thread *current = thread_current ();
 }
 
@@ -38,8 +48,7 @@ process_init (void) {
  * before process_create_initd() returns. Returns the initd's
  * thread id, or TID_ERROR if the thread cannot be created.
  * Notice that THIS SHOULD BE CALLED ONCE. */
-tid_t
-process_create_initd (const char *file_name) {
+tid_t process_create_initd (const char *file_name) {
 	char *fn_copy;
 	tid_t tid;
 
@@ -58,8 +67,7 @@ process_create_initd (const char *file_name) {
 }
 
 /* A thread function that launches first user process. */
-static void
-initd (void *f_name) {
+static void initd (void *f_name) {
 #ifdef VM
 	supplemental_page_table_init (&thread_current ()->spt);
 #endif
@@ -73,8 +81,7 @@ initd (void *f_name) {
 
 /* Clones the current process as `name`. Returns the new process's thread id, or
  * TID_ERROR if the thread cannot be created. */
-tid_t
-process_fork (const char *name, struct intr_frame *if_ UNUSED) {
+tid_t process_fork (const char *name, struct intr_frame *if_ UNUSED) {
 	/* Clone current thread to new thread.*/
 	return thread_create (name,
 			PRI_DEFAULT, __do_fork, thread_current ());
@@ -83,8 +90,7 @@ process_fork (const char *name, struct intr_frame *if_ UNUSED) {
 #ifndef VM
 /* Duplicate the parent's address space by passing this function to the
  * pml4_for_each. This is only for the project 2. */
-static bool
-duplicate_pte (uint64_t *pte, void *va, void *aux) {
+static bool duplicate_pte (uint64_t *pte, void *va, void *aux) {
 	struct thread *current = thread_current ();
 	struct thread *parent = (struct thread *) aux;
 	void *parent_page;
@@ -116,8 +122,7 @@ duplicate_pte (uint64_t *pte, void *va, void *aux) {
  * Hint) parent->tf does not hold the userland context of the process.
  *       That is, you are required to pass second argument of process_fork to
  *       this function. */
-static void
-__do_fork (void *aux) {
+static void __do_fork (void *aux) {
 	struct intr_frame if_;
 	struct thread *parent = (struct thread *) aux;
 	struct thread *current = thread_current ();
@@ -160,10 +165,17 @@ error:
 
 /* Switch the current execution context to the f_name.
  * Returns -1 on fail. */
-int
-process_exec (void *f_name) {
-	char *file_name = f_name;
+int process_exec (void *f_name) {
+	char *file_name = f_name; // 매개변수 void* 로 넘겨받은 f_name을 char* 로 변환 처리
 	bool success;
+
+/*
+    // ******************************LINE ADDED****************************** //
+    // Project 2-1 : User Programs - Argument Passing
+    char file_name_copy[128];
+    memcpy(file_name_copy, file_name, strlen(file_name) + EOL); // EOL(Sentinel)까지 포함하여 memecpy
+    // *************************ADDED LINE ENDS HERE************************* //
+*/
 
 	/* We cannot use the intr_frame in the thread structure.
 	 * This is because when current thread rescheduled,
@@ -176,13 +188,35 @@ process_exec (void *f_name) {
 	/* We first kill the current context */
 	process_cleanup ();
 
+    // ******************************LINE MODDED****************************** //
 	/* And then load the binary */
 	success = load (file_name, &_if);
+    /*memset(&_if, 0, sizeof _if);
+    success = load(file_name_copy, &_if);*/
+    // *************************ADDED LINE ENDS HERE************************* //
 
 	/* If load failed, quit. */
-	palloc_free_page (file_name);
-	if (!success)
-		return -1;
+    palloc_free_page (file_name);
+	if (!success) {
+        return -1;
+    }
+    // ******************************LINE ADDED****************************** //
+    // Project 2-1 : User Programs - Argument Passing
+    // hex dump for Debugging
+    // !!! CAUTION !!! hex_dump 는 매개변수를 pos, buffer, size, boolean 로 받는다. Defined in stdio.c
+    // Dumps the SIZE bytes in BUF to the console as hex bytes arranged 16 per line.
+    // Numeric offsets are also included, starting at OFS for the first byte in BUF.
+    // If ASCII is true then the corresponding ASCII characters are also rendered alongside.
+
+    /*hex_dump(_if.rsp, _if.rsp, KERN_BASE - _if.rsp, true);*/
+
+    // KERN_BASE , USER_STACK 어떤걸 기준으로 hex_dump 할 것인지에 따라 page_fault 오류 야기시킴
+    // 0000000047480000  Page fault at 0x47480000: not present error reading page in kernel context. 의 원인.
+    // Gitbook Project 2 : USER PROGRAMS - Introduction - Virtual Memory Layout~Accessing User Memory를 참조하자.
+
+    /*hex_dump(_if.rsp, _if.rsp, KERN_BASE - _if.rsp, true);*/
+    hex_dump(_if.rsp, _if.rsp, USER_STACK - _if.rsp, true);
+    // *************************ADDED LINE ENDS HERE************************* //
 
 	/* Start switched process. */
 	do_iret (&_if);
@@ -199,17 +233,21 @@ process_exec (void *f_name) {
  *
  * This function will be implemented in problem 2-2.  For now, it
  * does nothing. */
-int
-process_wait (tid_t child_tid UNUSED) {
+int process_wait (tid_t child_tid UNUSED) {
 	/* XXX: Hint) The pintos exit if process_wait (initd), we recommend you
 	 * XXX:       to add infinite loop here before
 	 * XXX:       implementing the process_wait. */
+    // ******************************LINE ADDED****************************** //
+    // Project 2-1 : User Programs - Argument Passing
+    while(true) {
+        // Infinite Loop to fake child wait
+    }
+    // *************************ADDED LINE ENDS HERE************************* //
 	return -1;
 }
 
 /* Exit the process. This function is called by thread_exit (). */
-void
-process_exit (void) {
+void process_exit (void) {
 	struct thread *curr = thread_current ();
 	/* TODO: Your code goes here.
 	 * TODO: Implement process termination message (see
@@ -220,8 +258,7 @@ process_exit (void) {
 }
 
 /* Free the current process's resources. */
-static void
-process_cleanup (void) {
+static void process_cleanup (void) {
 	struct thread *curr = thread_current ();
 
 #ifdef VM
@@ -248,8 +285,7 @@ process_cleanup (void) {
 
 /* Sets up the CPU for running user code in the nest thread.
  * This function is called on every context switch. */
-void
-process_activate (struct thread *next) {
+void process_activate (struct thread *next) {
 	/* Activate thread's page tables. */
 	pml4_activate (next->pml4);
 
@@ -316,18 +352,75 @@ static bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
 		uint32_t read_bytes, uint32_t zero_bytes,
 		bool writable);
 
+// ******************************LINE ADDED****************************** //
+// Project 2-1 : User Programs - Argument Passing
+void argument_stack(char **argv, int argc, struct intr_frame *if_){
+    char *arg_address[128];
+
+    // 스택의 확장 방향은 거꾸로!! for문 순회시 역방향으로(--)!!
+
+    // 1. 스택 공간 확보 및 복사
+    for(int i = argc - 1; i >= 0; i--){
+        int argv_with_senti_len = strlen(argv[i]) + EOL; // EOL(Sentinel) 포함한 길이를 변수에 저장
+        if_->rsp -= (argv_with_senti_len); // 받아온 길이 만큼 스택 크기를 늘려줌
+        memcpy(if_->rsp, argv[i], argv_with_senti_len); // 늘려준 스택 공간에 해당 인자를 복사
+        arg_address[i] = if_->rsp; // arg_address에 인자를 복사한 시작 주소값을 저장해준다
+    }
+
+    // 2. Stack Pointer의 word-alignment 단위는 8byte 단위이다. 따라서 이를 맞추기 위해 0 넣어줌.
+    while(if_->rsp % SAU != 0){
+        if_->rsp--;
+        memset(if_->rsp, 0, sizeof(uint8_t));
+    }
+
+    // 3. word-align 이후 argv[4]~argv[0]의 주소를 넣어준다
+    for(int j = argc; j >= 0; j--){
+        if_->rsp -= SAU;
+        if(j == argc){
+            memset(if_->rsp, 0, sizeof(char **));
+        } else{
+            memcpy(if_->rsp, &arg_address[j], sizeof(char **));
+        }
+    }
+
+    // 4. Fake return address
+    if_->rsp -= sizeof(void *);
+    memset(if_->rsp, 0, sizeof(void *));
+
+    // 5. Set rdi, rsi (rdi : 문자열 목적지 주소, rsi : 문자열 출발지 주소)
+    if_->R.rdi = argc;
+    if_->R.rsi = if_->rsp + SAU;
+}
+// *************************ADDED LINE ENDS HERE************************* //
+
 /* Loads an ELF executable from FILE_NAME into the current thread.
  * Stores the executable's entry point into *RIP
  * and its initial stack pointer into *RSP.
  * Returns true if successful, false otherwise. */
-static bool
-load (const char *file_name, struct intr_frame *if_) {
+static bool load (const char *file_name, struct intr_frame *if_) {
 	struct thread *t = thread_current ();
 	struct ELF ehdr;
 	struct file *file = NULL;
 	off_t file_ofs;
 	bool success = false;
 	int i;
+
+    // ******************************LINE ADDED****************************** //
+    // Project 2-1 : User Programs - Argument Passing
+    // strtok_r 함수 이용, 공백 기준으로 명령어 parsing 구현
+    char *arg_list[128];
+    char *token, *save_ptr;
+    int token_count = 0;
+
+    token = strtok_r(file_name, " ", &save_ptr);
+    arg_list[token_count] = token;
+
+    while(token!=NULL){
+        token = strtok_r(NULL, " ", &save_ptr); // 순서 주의
+        token_count++; // 순서 주의
+        arg_list[token_count] = token;
+    }
+    // *************************ADDED LINE ENDS HERE************************* //
 
 	/* Allocate and activate page directory. */
 	t->pml4 = pml4_create ();
@@ -416,6 +509,10 @@ load (const char *file_name, struct intr_frame *if_) {
 
 	/* TODO: Your code goes here.
 	 * TODO: Implement argument passing (see project2/argument_passing.html). */
+    // ******************************LINE ADDED****************************** //
+    // Project 2-1 : User Programs - Argument Passing
+    argument_stack(arg_list, token_count, if_);
+    // *************************ADDED LINE ENDS HERE************************* //
 
 	success = true;
 
@@ -428,8 +525,7 @@ done:
 
 /* Checks whether PHDR describes a valid, loadable segment in
  * FILE and returns true if so, false otherwise. */
-static bool
-validate_segment (const struct Phdr *phdr, struct file *file) {
+static bool validate_segment (const struct Phdr *phdr, struct file *file) {
 	/* p_offset and p_vaddr must have the same page offset. */
 	if ((phdr->p_offset & PGMASK) != (phdr->p_vaddr & PGMASK))
 		return false;
@@ -492,8 +588,7 @@ static bool install_page (void *upage, void *kpage, bool writable);
  *
  * Return true if successful, false if a memory allocation error
  * or disk read error occurs. */
-static bool
-load_segment (struct file *file, off_t ofs, uint8_t *upage,
+static bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
 		uint32_t read_bytes, uint32_t zero_bytes, bool writable) {
 	ASSERT ((read_bytes + zero_bytes) % PGSIZE == 0);
 	ASSERT (pg_ofs (upage) == 0);
@@ -535,8 +630,7 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
 }
 
 /* Create a minimal stack by mapping a zeroed page at the USER_STACK */
-static bool
-setup_stack (struct intr_frame *if_) {
+static bool setup_stack (struct intr_frame *if_) {
 	uint8_t *kpage;
 	bool success = false;
 
@@ -560,8 +654,7 @@ setup_stack (struct intr_frame *if_) {
  * with palloc_get_page().
  * Returns true on success, false if UPAGE is already mapped or
  * if memory allocation fails. */
-static bool
-install_page (void *upage, void *kpage, bool writable) {
+static bool install_page (void *upage, void *kpage, bool writable) {
 	struct thread *t = thread_current ();
 
 	/* Verify that there's not already a page at that virtual
@@ -574,8 +667,7 @@ install_page (void *upage, void *kpage, bool writable) {
  * If you want to implement the function for only project 2, implement it on the
  * upper block. */
 
-static bool
-lazy_load_segment (struct page *page, void *aux) {
+static bool lazy_load_segment (struct page *page, void *aux) {
 	/* TODO: Load the segment from the file */
 	/* TODO: This called when the first page fault occurs on address VA. */
 	/* TODO: VA is available when calling this function. */
@@ -595,8 +687,7 @@ lazy_load_segment (struct page *page, void *aux) {
  *
  * Return true if successful, false if a memory allocation error
  * or disk read error occurs. */
-static bool
-load_segment (struct file *file, off_t ofs, uint8_t *upage,
+static bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
 		uint32_t read_bytes, uint32_t zero_bytes, bool writable) {
 	ASSERT ((read_bytes + zero_bytes) % PGSIZE == 0);
 	ASSERT (pg_ofs (upage) == 0);
@@ -624,8 +715,7 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
 }
 
 /* Create a PAGE of stack at the USER_STACK. Return true on success. */
-static bool
-setup_stack (struct intr_frame *if_) {
+static bool setup_stack (struct intr_frame *if_) {
 	bool success = false;
 	void *stack_bottom = (void *) (((uint8_t *) USER_STACK) - PGSIZE);
 
