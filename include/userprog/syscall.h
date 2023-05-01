@@ -3,4 +3,8 @@
 
 void syscall_init (void);
 
+/* --------- project2 --------- */
+void check_address(void *addr);
+
+
 #endif /* userprog/syscall.h */

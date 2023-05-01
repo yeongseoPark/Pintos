@@ -44,3 +44,21 @@ syscall_handler (struct intr_frame *f UNUSED) {
 	printf ("system call!\n");
 	thread_exit ();
 }
+
+/*----------- project2 : user memory access --------------*/
+// 주소값이 유저 영역에서 사용하는 주소값인지 확인, 유저 영역을 벗어난 영역인경우 프로세스를 종료(exit(-1))
+// 잘못된 메모리에 대한 접근을 막음
+/* 
+	1. Null pointer이거나
+	2. KERN_BASE 보다 큰 값 : kernel VM을 가리킬때
+	3. 유저 영역을 가리키지만, 아직 할당되지 않음
+*/
+void check_address(void *addr) {
+	if (&addr > KERN_BASE) { // 유저 어드레스는 KERN_BASE 밑이여야 함
+		// free(addr);
+		struct thread *cur = thread_current();
+		if (addr == NULL || is_kernel_vaddr(addr) || pml4_get_page(cur->pml4 ,addr) == NULL) { // pml4 는 매핑을 관리하는 페이지테이블 
+			exit(1);
+		}
+	}	
+}

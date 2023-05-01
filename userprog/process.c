@@ -22,21 +22,21 @@
 #include "vm/vm.h"
 #endif
 
-// ******************************LINE ADDED****************************** //
+// ******************************project2****************************** //
 // Project 2-1 : User Programs - Argument Passing
 #define EOL sizeof("") // Size of Sentinel
 #define SAU 8 // Stack Pointer Alignment Unit = 8 byte
-// *************************ADDED LINE ENDS HERE************************* //
+// *************************project2************************* //
 
 static void process_cleanup (void);
 static bool load (const char *file_name, struct intr_frame *if_);
 static void initd (void *f_name);
 static void __do_fork (void *);
 
-// ******************************LINE ADDED****************************** //
+// ******************************project2****************************** //
 // Project 2-1 : User Programs - Argument Passing
 void argument_stack(char **argv, int argc, struct intr_frame *if_);
-// *************************ADDED LINE ENDS HERE************************* //
+// *************************project2************************* //
 
 /* General process initializer for initd and other process. */
 static void process_init (void) {
@@ -169,18 +169,10 @@ int process_exec (void *f_name) {
 	char *file_name = f_name; // 매개변수 void* 로 넘겨받은 f_name을 char* 로 변환 처리
 	bool success;
 
-/*
-    // ******************************LINE ADDED****************************** //
-    // Project 2-1 : User Programs - Argument Passing
-    char file_name_copy[128];
-    memcpy(file_name_copy, file_name, strlen(file_name) + EOL); // EOL(Sentinel)까지 포함하여 memecpy
-    // *************************ADDED LINE ENDS HERE************************* //
-*/
-
 	/* We cannot use the intr_frame in the thread structure.
 	 * This is because when current thread rescheduled,
 	 * it stores the execution information to the member. */
-	struct intr_frame _if;
+	struct intr_frame _if; // 인터럽트 프레임의 구조체 멤버에 필요한 정보를 담는다
 	_if.ds = _if.es = _if.ss = SEL_UDSEG;
 	_if.cs = SEL_UCSEG;
 	_if.eflags = FLAG_IF | FLAG_MBS;
@@ -188,19 +180,17 @@ int process_exec (void *f_name) {
 	/* We first kill the current context */
 	process_cleanup ();
 
-    // ******************************LINE MODDED****************************** //
-	/* And then load the binary */
+    // ******************************project2****************************** //
+	/* And then load the binary -> ELF 실행파일 로드*/
 	success = load (file_name, &_if);
-    /*memset(&_if, 0, sizeof _if);
-    success = load(file_name_copy, &_if);*/
-    // *************************ADDED LINE ENDS HERE************************* //
+    // *************************project2************************* //
 
 	/* If load failed, quit. */
     palloc_free_page (file_name);
 	if (!success) {
         return -1;
     }
-    // ******************************LINE ADDED****************************** //
+    // ******************************project2****************************** //
     // Project 2-1 : User Programs - Argument Passing
     // hex dump for Debugging
     // !!! CAUTION !!! hex_dump 는 매개변수를 pos, buffer, size, boolean 로 받는다. Defined in stdio.c
@@ -208,15 +198,13 @@ int process_exec (void *f_name) {
     // Numeric offsets are also included, starting at OFS for the first byte in BUF.
     // If ASCII is true then the corresponding ASCII characters are also rendered alongside.
 
-    /*hex_dump(_if.rsp, _if.rsp, KERN_BASE - _if.rsp, true);*/
-
     // KERN_BASE , USER_STACK 어떤걸 기준으로 hex_dump 할 것인지에 따라 page_fault 오류 야기시킴
     // 0000000047480000  Page fault at 0x47480000: not present error reading page in kernel context. 의 원인.
     // Gitbook Project 2 : USER PROGRAMS - Introduction - Virtual Memory Layout~Accessing User Memory를 참조하자.
 
-    /*hex_dump(_if.rsp, _if.rsp, KERN_BASE - _if.rsp, true);*/
+    // hex_dump(_if.rsp, _if.rsp, KERN_BASE - _if.rsp, true);
     hex_dump(_if.rsp, _if.rsp, USER_STACK - _if.rsp, true);
-    // *************************ADDED LINE ENDS HERE************************* //
+    // *************************project2************************* //
 
 	/* Start switched process. */
 	do_iret (&_if);
@@ -237,12 +225,12 @@ int process_wait (tid_t child_tid UNUSED) {
 	/* XXX: Hint) The pintos exit if process_wait (initd), we recommend you
 	 * XXX:       to add infinite loop here before
 	 * XXX:       implementing the process_wait. */
-    // ******************************LINE ADDED****************************** //
+    // ******************************project2****************************** //
     // Project 2-1 : User Programs - Argument Passing
     while(true) {
         // Infinite Loop to fake child wait
     }
-    // *************************ADDED LINE ENDS HERE************************* //
+    // *************************project2************************* //
 	return -1;
 }
 
@@ -367,7 +355,7 @@ void argument_stack(char **argv, int argc, struct intr_frame *if_){
         arg_address[i] = if_->rsp; // arg_address에 인자를 복사한 시작 주소값을 저장해준다
     }
 
-    // 2. Stack Pointer의 word-alignment 단위는 8byte 단위이다. 따라서 이를 맞추기 위해 0 넣어줌.
+    // 2. SAU = 8 Stack Pointer의 word-alignment 단위는 8byte 단위이다. 따라서 이를 맞추기 위해 0 넣어줌.
     while(if_->rsp % SAU != 0){
         if_->rsp--;
         memset(if_->rsp, 0, sizeof(uint8_t));
@@ -388,10 +376,10 @@ void argument_stack(char **argv, int argc, struct intr_frame *if_){
     memset(if_->rsp, 0, sizeof(void *));
 
     // 5. Set rdi, rsi (rdi : 문자열 목적지 주소, rsi : 문자열 출발지 주소)
-    if_->R.rdi = argc;
-    if_->R.rsi = if_->rsp + SAU;
+    if_->R.rdi = argc; // rdi에 매개변수 개수 저장
+    if_->R.rsi = if_->rsp + SAU; // rsi에 스택 다음 값 저장 
 }
-// *************************ADDED LINE ENDS HERE************************* //
+// *************************project2************************* //
 
 /* Loads an ELF executable from FILE_NAME into the current thread.
  * Stores the executable's entry point into *RIP
@@ -405,7 +393,7 @@ static bool load (const char *file_name, struct intr_frame *if_) {
 	bool success = false;
 	int i;
 
-    // ******************************LINE ADDED****************************** //
+    // ******************************project2****************************** //
     // Project 2-1 : User Programs - Argument Passing
     // strtok_r 함수 이용, 공백 기준으로 명령어 parsing 구현
     char *arg_list[128];
@@ -420,7 +408,7 @@ static bool load (const char *file_name, struct intr_frame *if_) {
         token_count++; // 순서 주의
         arg_list[token_count] = token;
     }
-    // *************************ADDED LINE ENDS HERE************************* //
+    // *************************project2************************* //
 
 	/* Allocate and activate page directory. */
 	t->pml4 = pml4_create ();
@@ -504,7 +492,7 @@ static bool load (const char *file_name, struct intr_frame *if_) {
 	if (!setup_stack (if_))
 		goto done;
 
-	/* Start address. */
+	/* Start address. 실행파일의 진입점*/
 	if_->rip = ehdr.e_entry;
 
 	/* TODO: Your code goes here.

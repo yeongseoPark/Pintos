@@ -5,6 +5,8 @@
 #include <list.h>
 #include <stdint.h>
 #include "threads/interrupt.h"
+#define USERPROG // project2 : user memory access : ifdef USERPROG 내부 구문 활성화 위해서
+
 #ifdef VM
 #include "vm/vm.h"
 #endif
