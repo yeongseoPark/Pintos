@@ -2,6 +2,16 @@
 #define FILESYS_FILE_H
 
 #include "filesys/off_t.h"
+// ******************************LINE ADDED****************************** //
+// Project 2-2-2 : User Programs - System Call - File Descriptor
+#include <stdbool.h> // for deny_write
+
+struct file {
+    struct inode *inode;
+    off_t pos;
+    bool deny_write;
+};
+// *************************ADDED LINE ENDS HERE************************* //
 
 struct inode;
 

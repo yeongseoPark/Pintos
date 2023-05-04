@@ -1,5 +1,16 @@
 {
     "files.associations": {
-        "stdio.h": "c"
+        "stdio.h": "c",
+        "stdint.h": "c",
+        "*.inc": "c",
+        "process.h": "c",
+        "syscall.h": "c",
+        "filesys.h": "c",
+        "stdbool.h": "c",
+        "debug.h": "c",
+        "stddef.h": "c",
+        "interrupt.h": "c",
+        "inttypes.h": "c",
+        "thread.h": "c"
     }
 }

@@ -48,27 +48,28 @@
 /* Kernel TSS. */
 struct task_state *tss;
 
-/* Initializes the kernel TSS. */
-void
-tss_init (void) {
+/*Initializes the kernel TSS(Task State Segment)
+ * TSS는 선점형(preemptive) 스케쥴러가 Task Switching 을 실행할때 기존에 실행중인 태스크의 상태를 보존하고 있다가,
+ * 이후에 다시 CPU를 선점하게 되었을때 보존된 태스크의 상태를 복구시키기 위한 영역
+ * 사용자 프로세스에서 시스템 콜을 호출하면 인터럽트 핸들러로 들어가게 되는데 이때 커널의 스택포인터를 찾아서
+ * 거기에 이제까지 사용자 프로세스에서 진행했던 작업을 저장해둔다. 이때 커널 스택을 찾는데 드는 오버헤드를 줄이기 위한 용도로 사용*/
+void tss_init (void) {
 	/* Our TSS is never used in a call gate or task gate, so only a
 	 * few fields of it are ever referenced, and those are the only
 	 * ones we initialize. */
-	tss = palloc_get_page (PAL_ASSERT | PAL_ZERO);
-	tss_update (thread_current ());
+	tss = palloc_get_page (PAL_ASSERT | PAL_ZERO); // TSS 초기화이후
+	tss_update (thread_current ()); // 현재 스레드에 대해 tss_update 함수 호출
 }
 
 /* Returns the kernel TSS. */
-struct task_state *
-tss_get (void) {
+struct task_state *tss_get (void) {
 	ASSERT (tss != NULL);
 	return tss;
 }
 
-/* Sets the ring 0 stack pointer in the TSS to point to the end
- * of the thread stack. */
-void
-tss_update (struct thread *next) {
+/* Sets the ring 0 stack pointer in the TSS to point to the end of the thread stack. */
+void tss_update (struct thread *next) {
 	ASSERT (tss != NULL);
 	tss->rsp0 = (uint64_t) next + PGSIZE;
+    // 현재 스레드에 대해 커널 주소의 시작부분에 페이지크기(PGSIZE) 만큼 더함 = 커널 페이지의 끝 주소
 }

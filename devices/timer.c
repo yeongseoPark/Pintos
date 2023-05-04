@@ -32,11 +32,10 @@ static void real_time_sleep (int64_t num, int32_t denom);
 /* Sets up the 8254 Programmable Interval Timer (PIT) to
    interrupt PIT_FREQ times per second, and registers the
    corresponding interrupt. */
-void
-timer_init (void) {
+void timer_init (void) {
 	/* 8254 input frequency divided by TIMER_FREQ, rounded to
 	   nearest. */
-	uint16_t count = (1193180 + TIMER_FREQ / 2) / TIMER_FREQ; // 1초 -> 100HZ단위
+	uint16_t count = (1193180 + TIMER_FREQ / 2) / TIMER_FREQ;
 
 	outb (0x43, 0x34);    /* CW: counter 0, LSB then MSB, mode 2, binary. */
 	outb (0x40, count & 0xff);
@@ -46,8 +45,7 @@ timer_init (void) {
 }
 
 /* Calibrates loops_per_tick, used to implement brief delays. */
-void
-timer_calibrate (void) {
+void timer_calibrate (void) {
 	unsigned high_bit, test_bit;
 
 	ASSERT (intr_get_level () == INTR_ON);
@@ -71,8 +69,7 @@ timer_calibrate (void) {
 }
 
 /* Returns the number of timer ticks since the OS booted. */
-int64_t
-timer_ticks (void) {
+int64_t timer_ticks (void) {
 	enum intr_level old_level = intr_disable ();
 	int64_t t = ticks;
 	intr_set_level (old_level);
@@ -82,68 +79,71 @@ timer_ticks (void) {
 
 /* Returns the number of timer ticks elapsed since THEN, which
    should be a value once returned by timer_ticks(). */
-int64_t
-timer_elapsed (int64_t then) {
+int64_t timer_elapsed (int64_t then) {
 	return timer_ticks () - then;
 }
 
 /* Suspends execution for approximately TICKS timer ticks. */
-void
-timer_sleep (int64_t ticks) {
+void timer_sleep (int64_t ticks) {
 	int64_t start = timer_ticks ();
 
-	// checkpoint : 왜 인터럽트 켜져있는지 확인하나요???
-	// ASSERT (intr_get_level () == INTR_ON); 
-	// while (timer_elapsed (start) < ticks)
-		// thread_yield ();
-
-	/* pjt1 : 현재 쓰레드를 wait list에 넣기 */
 	ASSERT (intr_get_level () == INTR_ON);
-	thread_sleep(start + ticks);
+
+    // ******************************LINE MODDED****************************** //
+    // Project 1-1 : Alarm Clock - Busy Waiting -> Sleep-Awake
+    // Busy Waiting 설명
+    // timer_elapsed(start) : start 시점 부터 현재 시간이 얼마나 지났는지 반환
+    // 즉, 지난 시간이 ticks 값 보다 작은 동안(while loop) 스레드는 계속 yield 상태 처리
+    // Sleep-Awake Solution 구현 위해 busy waiting 을 구현하던 while loop
+    // block comment 처리
+
+	/*while (timer_elapsed(start) < ticks)
+		thread_yield ();*/
+
+    // Sleep-Awake
+    thread_sleep(start + ticks);
+    // *************************MODDED LINE ENDS HERE************************* //
 }
 
 /* Suspends execution for approximately MS milliseconds. */
-void
-timer_msleep (int64_t ms) {
+void timer_msleep (int64_t ms) {
 	real_time_sleep (ms, 1000);
 }
 
 /* Suspends execution for approximately US microseconds. */
-void
-timer_usleep (int64_t us) {
+void timer_usleep (int64_t us) {
 	real_time_sleep (us, 1000 * 1000);
 }
 
 /* Suspends execution for approximately NS nanoseconds. */
-void
-timer_nsleep (int64_t ns) {
+void timer_nsleep (int64_t ns) {
 	real_time_sleep (ns, 1000 * 1000 * 1000);
 }
 
 /* Prints timer statistics. */
-void
-timer_print_stats (void) {
-	printf ("Timer: %"PRId64" ticks\n", timer_ticks ());
+void timer_print_stats (void) {
+    printf ("Timer: %"PRId64" ticks\n", timer_ticks ());
 }
-
-/* Timer interrupt handler. */
-static void
-timer_interrupt (struct intr_frame *args UNUSED) {
-	ticks++;
-	thread_tick (); // 출력용
-	
-	int64_t cur_min_time = get_min_time();
 
-	if (ticks >= cur_min_time) 
-	{
-		thread_awake(ticks);
-	}
+/* Timer interrupt handler. */
+static void timer_interrupt (struct intr_frame *args UNUSED){
+    ticks++;
+    thread_tick ();
+
+    // ******************************LINE ADDED****************************** //
+    // Project 1-1 : Alarm Clock - Busy Waiting -> Sleep-Awake
+    // sleep_list 와 global tick을 체크
+    // 매 tick 마다 sleep_list에서 깨울 스레드가 있는지 확인하고,
+    // thread_awake 함수를 호출하여 해당되는 스레드를 꺠운다.
+    if (get_next_tick_to_awake() <= ticks){
+        thread_awake(ticks);
+    }
+    // *************************ADDED LINE ENDS HERE************************* //
 }
 
 /* Returns true if LOOPS iterations waits for more than one timer
    tick, otherwise false. */
-static bool
-too_many_loops (unsigned loops) {
+static bool too_many_loops (unsigned loops) {
 	/* Wait for a timer tick. */
 	int64_t start = ticks;
 	while (ticks == start)
@@ -165,21 +165,19 @@ too_many_loops (unsigned loops) {
    affect timings, so that if this function was inlined
    differently in different places the results would be difficult
    to predict. */
-static void NO_INLINE
-busy_wait (int64_t loops) {
+static void NO_INLINE busy_wait (int64_t loops) {
 	while (loops-- > 0)
 		barrier ();
 }
 
 /* Sleep for approximately NUM/DENOM seconds. */
-static void
-real_time_sleep (int64_t num, int32_t denom) {
-	/* Convert NUM/DENOM seconds into timer ticks, rounding down.
+static void real_time_sleep (int64_t num, int32_t denom) {
+    /* Convert NUM/DENOM seconds into timer ticks, rounding down.
 
-	   (NUM / DENOM) s
-	   ---------------------- = NUM * TIMER_FREQ / DENOM ticks.
-	   1 s / TIMER_FREQ ticks
-	   */
+        (NUM / DENOM) s
+     ---------------------- = NUM * TIMER_FREQ / DENOM ticks.
+     1 s / TIMER_FREQ ticks
+  */
 	int64_t ticks = num * TIMER_FREQ / denom;
 
 	ASSERT (intr_get_level () == INTR_ON);

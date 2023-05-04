@@ -65,20 +65,22 @@ static void print_stats (void);
 int main (void) NO_RETURN;
 
 /* Pintos main program. */
-int
-main (void) {
+int main (void) {
 	uint64_t mem_end;
 	char **argv;
 
 	/* Clear BSS and get machine's RAM size. */
+    // BSS is the area of memory used to hold static variables which must be initialized to zero.
+    // Block Started by Symbol (BSS) : 제로 값으로 초기화된 정적 할당 변수가 포함된 데이터 세그먼트의 일부로 컴파일러나 링커에 의해 사용.
 	bss_init ();
 
 	/* Break command line into arguments and parse options. */
 	argv = read_command_line ();
 	argv = parse_options (argv);
 
-	/* Initialize ourselves as a thread so we can use locks,
-	   then enable console locking. */
+	/* Initialize ourselves as a thread so we can use locks, then enable console locking. */
+    // Debugging Project 2 : User Programs - Argument Passing
+    /*printf("thread_init called in main @init.c AKA pintos main\n");*/
 	thread_init ();
 	console_init ();
 
@@ -128,8 +130,7 @@ main (void) {
 }
 
 /* Clear BSS */
-static void
-bss_init (void) {
+static void bss_init (void) {
 	/* The "BSS" is a segment that should be initialized to zeros.
 	   It isn't actually stored on disk or zeroed by the kernel
 	   loader, so we have to zero it ourselves.
@@ -143,8 +144,7 @@ bss_init (void) {
 /* Populates the page table with the kernel virtual mapping,
  * and then sets up the CPU to use the new page directory.
  * Points base_pml4 to the pml4 it creates. */
-static void
-paging_init (uint64_t mem_end) {
+static void paging_init (uint64_t mem_end) {
 	uint64_t *pml4, *pte;
 	int perm;
 	pml4 = base_pml4 = palloc_get_page (PAL_ASSERT | PAL_ZERO);
@@ -169,8 +169,7 @@ paging_init (uint64_t mem_end) {
 
 /* Breaks the kernel command line into words and returns them as
    an argv-like array. */
-static char **
-read_command_line (void) {
+static char **read_command_line (void) {
 	static char *argv[LOADER_ARGS_LEN / 2 + 1];
 	char *p, *end;
 	int argc;
@@ -202,8 +201,7 @@ read_command_line (void) {
 
 /* Parses options in ARGV[]
    and returns the first non-option argument. */
-static char **
-parse_options (char **argv) {
+static char **parse_options (char **argv) {
 	for (; *argv != NULL && **argv == '-'; argv++) {
 		char *save_ptr;
 		char *name = strtok_r (*argv, "=", &save_ptr);
@@ -235,8 +233,7 @@ parse_options (char **argv) {
 }
 
 /* Runs the task specified in ARGV[1]. */
-static void
-run_task (char **argv) {
+static void run_task (char **argv) {
 	const char *task = argv[1];
 
 	printf ("Executing '%s':\n", task);
@@ -254,8 +251,7 @@ run_task (char **argv) {
 
 /* Executes all of the actions specified in ARGV[]
    up to the null pointer sentinel. */
-static void
-run_actions (char **argv) {
+static void run_actions (char **argv) {
 	/* An action. */
 	struct action {
 		char *name;                       /* Action name. */
@@ -301,8 +297,7 @@ run_actions (char **argv) {
 
 /* Prints a kernel command line help message and powers off the
    machine. */
-static void
-usage (void) {
+static void usage (void) {
 	printf ("\nCommand line syntax: [OPTION...] [ACTION...]\n"
 			"Options must precede actions.\n"
 			"Actions are executed in the order specified.\n"
@@ -336,8 +331,7 @@ usage (void) {
 
 /* Powers down the machine we're running on,
    as long as we're running on Bochs or QEMU. */
-void
-power_off (void) {
+void power_off (void) {
 #ifdef FILESYS
 	filesys_done ();
 #endif
@@ -350,8 +344,7 @@ power_off (void) {
 }
 
 /* Print statistics about Pintos execution. */
-static void
-print_stats (void) {
+static void print_stats (void) {
 	timer_print_stats ();
 	thread_print_stats ();
 #ifdef FILESYS

@@ -141,24 +141,18 @@ bool list_empty (struct list *);
 /* Miscellaneous. */
 void list_reverse (struct list *);
 
-/* Compares the value of two list elements A and B, given
-   auxiliary data AUX.  Returns true if A is less than B, or
-   false if A is greater than or equal to B. */
-// 함수 직접 구현
-typedef bool list_less_func (const struct list_elem *a,
-                             const struct list_elem *b,
-                             void *aux); 
+/* Compares the value of two list elements A and B, given auxiliary data AUX.
+ * 두개의 요소 A,B를 매개변수로 받아서 A가 B보다 작으면 TRUE, A가 B보다 크거나 같으면 FALSE 반환
+ * Returns true if A is less than B, or false if A is greater than or equal to B. */
+typedef bool list_less_func (const struct list_elem *a, const struct list_elem *b, void *aux);
 
 /* Operations on lists with ordered elements. */
-void list_sort (struct list *,
-                list_less_func *, void *aux);
-void list_insert_ordered (struct list *, struct list_elem *,
-                          list_less_func *, void *aux);
-void list_unique (struct list *, struct list *duplicates,
-                  list_less_func *, void *aux);
+void list_sort (struct list *, list_less_func *, void *aux);
+void list_insert_ordered (struct list *, struct list_elem *, list_less_func *, void *aux);
+void list_unique (struct list *, struct list *duplicates, list_less_func *, void *aux);
 
 /* Max and min. */
 struct list_elem *list_max (struct list *, list_less_func *, void *aux);
 struct list_elem *list_min (struct list *, list_less_func *, void *aux);
 
-#endif /* lib/kernel/list.h */
+#endif /* __LIB_KERNEL_LIST_H */

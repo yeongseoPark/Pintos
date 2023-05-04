@@ -15,8 +15,7 @@ static void do_format (void);
 
 /* Initializes the file system module.
  * If FORMAT is true, reformats the file system. */
-void
-filesys_init (bool format) {
+void filesys_init (bool format) {
 	filesys_disk = disk_get (0, 1);
 	if (filesys_disk == NULL)
 		PANIC ("hd0:1 (hdb) not present, file system initialization failed");
@@ -43,8 +42,7 @@ filesys_init (bool format) {
 
 /* Shuts down the file system module, writing any unwritten data
  * to disk. */
-void
-filesys_done (void) {
+void filesys_done (void) {
 	/* Original FS */
 #ifdef EFILESYS
 	fat_close ();
@@ -57,8 +55,7 @@ filesys_done (void) {
  * Returns true if successful, false otherwise.
  * Fails if a file named NAME already exists,
  * or if internal memory allocation fails. */
-bool
-filesys_create (const char *name, off_t initial_size) {
+bool filesys_create (const char *name, off_t initial_size) {
 	disk_sector_t inode_sector = 0;
 	struct dir *dir = dir_open_root ();
 	bool success = (dir != NULL
@@ -77,8 +74,7 @@ filesys_create (const char *name, off_t initial_size) {
  * otherwise.
  * Fails if no file named NAME exists,
  * or if an internal memory allocation fails. */
-struct file *
-filesys_open (const char *name) {
+struct file *filesys_open (const char *name) {
 	struct dir *dir = dir_open_root ();
 	struct inode *inode = NULL;
 
@@ -93,8 +89,7 @@ filesys_open (const char *name) {
  * Returns true if successful, false on failure.
  * Fails if no file named NAME exists,
  * or if an internal memory allocation fails. */
-bool
-filesys_remove (const char *name) {
+bool filesys_remove (const char *name) {
 	struct dir *dir = dir_open_root ();
 	bool success = dir != NULL && dir_remove (dir, name);
 	dir_close (dir);
@@ -103,8 +98,7 @@ filesys_remove (const char *name) {
 }
 
 /* Formats the file system. */
-static void
-do_format (void) {
+static void do_format (void) {
 	printf ("Formatting file system...");
 
 #ifdef EFILESYS

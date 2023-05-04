@@ -22,21 +22,21 @@
 #include "vm/vm.h"
 #endif
 
-// ******************************project2****************************** //
+// ******************************LINE ADDED****************************** //
 // Project 2-1 : User Programs - Argument Passing
 #define EOL sizeof("") // Size of Sentinel
 #define SAU 8 // Stack Pointer Alignment Unit = 8 byte
-// *************************project2************************* //
+// *************************ADDED LINE ENDS HERE************************* //
 
 static void process_cleanup (void);
 static bool load (const char *file_name, struct intr_frame *if_);
 static void initd (void *f_name);
 static void __do_fork (void *);
 
-// ******************************project2****************************** //
+// ******************************LINE ADDED****************************** //
 // Project 2-1 : User Programs - Argument Passing
 void argument_stack(char **argv, int argc, struct intr_frame *if_);
-// *************************project2************************* //
+// *************************ADDED LINE ENDS HERE************************* //
 
 /* General process initializer for initd and other process. */
 static void process_init (void) {
@@ -51,6 +51,10 @@ static void process_init (void) {
 tid_t process_create_initd (const char *file_name) {
 	char *fn_copy;
 	tid_t tid;
+    // ******************************LINE ADDED****************************** //
+    // Project 2-2 : User Programs - System Call
+    char *save_ptr;
+    // *************************ADDED LINE ENDS HERE************************* //
 
 	/* Make a copy of FILE_NAME.
 	 * Otherwise there's a race between the caller and load(). */
@@ -60,7 +64,12 @@ tid_t process_create_initd (const char *file_name) {
 	strlcpy (fn_copy, file_name, PGSIZE);
 
 	/* Create a new thread to execute FILE_NAME. */
-	tid = thread_create (file_name, PRI_DEFAULT, initd, fn_copy);
+    // ******************************LINE MODDED****************************** //
+    // Project 2-2-2 : User Programs - System Call - File Descriptor
+    file_name = strtok_r (file_name, " ", &save_ptr);
+    tid = thread_create (file_name, PRI_DEFAULT, initd, fn_copy);
+    // *************************MODDED LINE ENDS HERE************************* //
+
 	if (tid == TID_ERROR)
 		palloc_free_page (fn_copy);
 	return tid;
@@ -83,8 +92,28 @@ static void initd (void *f_name) {
  * TID_ERROR if the thread cannot be created. */
 tid_t process_fork (const char *name, struct intr_frame *if_ UNUSED) {
 	/* Clone current thread to new thread.*/
-	return thread_create (name,
-			PRI_DEFAULT, __do_fork, thread_current ());
+    // ******************************LINE ADDED****************************** //
+    // Project 2-2 : User Programs - System Call
+
+    struct thread *curr = thread_current();
+    memcpy(&curr->parent_if, if_, sizeof(struct intr_frame));
+
+    tid_t pid = thread_create(name, PRI_DEFAULT, __do_fork, curr);
+    /*return thread_create (name, PRI_DEFAULT, __do_fork, thread_current ());*/
+
+    if (pid == TID_ERROR){
+        return TID_ERROR;
+    }
+
+    struct thread *child = get_child(pid);
+
+    sema_down(&child->fork_sema);
+
+    if (child->exit_status == -1)
+        return TID_ERROR;
+
+    return pid;
+    // *************************ADDED LINE ENDS HERE************************* //
 }
 
 #ifndef VM
@@ -98,21 +127,43 @@ static bool duplicate_pte (uint64_t *pte, void *va, void *aux) {
 	bool writable;
 
 	/* 1. TODO: If the parent_page is kernel page, then return immediately. */
+    // ******************************LINE ADDED****************************** //
+    // Project 2-2 : User Programs - System Call
+    if (is_kernel_vaddr(va)){
+        return true;
+    }
+    // *************************ADDED LINE ENDS HERE************************* //
 
 	/* 2. Resolve VA from the parent's page map level 4. */
 	parent_page = pml4_get_page (parent->pml4, va);
+    // ******************************LINE ADDED****************************** //
+    // Project 2-2 : User Programs - System Call
+    if (parent_page == NULL){
+        return false;
+    }
+    // *************************ADDED LINE ENDS HERE************************* //
 
 	/* 3. TODO: Allocate new PAL_USER page for the child and set result to
 	 *    TODO: NEWPAGE. */
+    newpage = palloc_get_page (PAL_USER | PAL_ZERO);
+    if (newpage == NULL){
+        return false;
+    }
 
 	/* 4. TODO: Duplicate parent's page to the new page and
 	 *    TODO: check whether parent's page is writable or not (set WRITABLE
 	 *    TODO: according to the result). */
+    memcpy(newpage, parent_page, PGSIZE); // parent_page는 가상주소이고, 이것을 newpage에 복사 _ SIZE는 4KB(할당해준 공간도 4KB)
+    writable = is_writable(pte); // pte가 읽고/쓰기가 가능한지 확인
 
 	/* 5. Add new page to child's page table at address VA with WRITABLE
 	 *    permission. */
 	if (!pml4_set_page (current->pml4, va, newpage, writable)) {
 		/* 6. TODO: if fail to insert page, do error handling. */
+        // ******************************LINE ADDED****************************** //
+        // Project 2-2 : User Programs - System Call
+        return false;
+        // *************************ADDED LINE ENDS HERE************************* //
 	}
 	return true;
 }
@@ -128,10 +179,15 @@ static void __do_fork (void *aux) {
 	struct thread *current = thread_current ();
 	/* TODO: somehow pass the parent_if. (i.e. process_fork()'s if_) */
 	struct intr_frame *parent_if;
-	bool succ = true;
+	bool success = true;
 
 	/* 1. Read the cpu context to local stack. */
+    // ******************************LINE ADDED****************************** //
+    parent_if = &parent->parent_if;
+
 	memcpy (&if_, parent_if, sizeof (struct intr_frame));
+    if_.R.rax = 0; // Child Process return 0
+    // *************************ADDED LINE ENDS HERE************************* //
 
 	/* 2. Duplicate PT */
 	current->pml4 = pml4_create();
@@ -154,13 +210,65 @@ static void __do_fork (void *aux) {
 	 * TODO:       from the fork() until this function successfully duplicates
 	 * TODO:       the resources of parent.*/
 
-	process_init ();
+    // ******************************LINE ADDED****************************** //
+    // Project 2-2-2 : User Programs - System Call - File Descriptor
+    if (parent->fd_idx >= FDCOUNT_LIMIT)
+        goto error;
+
+    current->fd_table[0] = parent->fd_table[0]; // stdin
+    current->fd_table[1] = parent->fd_table[1]; // stdout
+
+    for (int i = 2 ; i < FDCOUNT_LIMIT ;i++ ){
+        struct file *f = parent->fd_table[i];
+        if (f == NULL){
+            continue;
+        }
+        current->fd_table[i] = file_duplicate(f);
+    }
+
+    /*// 디버깅중
+    for (int i = 0; i < FDCOUNT_LIMIT; i++)
+    {
+        struct file *file = parent->fd_table[i];
+        if (file == NULL)
+            continue;
+        // if 'file' is already duplicated in child don't duplicate again but share it
+        bool found = false;
+        if (!found)
+        {
+            struct file *new_file;
+            if (file > 2)
+                new_file = file_duplicate(file);
+            else
+                new_file = file;
+            current->fd_table[i] = new_file;
+        }
+    }
+    // 디버깅중*/
+
+    current->fd_idx = parent->fd_idx;
+
+    // if child loaded successfully, wake up parent in process_fork
+    sema_up(&current->fork_sema);
+
+    // 디버깅중
+    /*if_.R.rax = 0;
+    process_init ();*/
+
+    // *************************ADDED LINE ENDS HERE************************* //
 
 	/* Finally, switch to the newly created process. */
-	if (succ)
+	if (success)
 		do_iret (&if_);
 error:
-	thread_exit ();
+    // ******************************LINE MODDED****************************** //
+    // Project 2-2 : User Programs - System Call
+    current->exit_status = TID_ERROR;
+    sema_up(&current->fork_sema);
+    exit(TID_ERROR);
+    /*thread_exit ();*/
+    // *************************MODDED LINE ENDS HERE************************* //
+
 }
 
 /* Switch the current execution context to the f_name.
@@ -169,10 +277,45 @@ int process_exec (void *f_name) {
 	char *file_name = f_name; // 매개변수 void* 로 넘겨받은 f_name을 char* 로 변환 처리
 	bool success;
 
+    // ******************************LINE ADDED****************************** //
+    // Project 2-1 : User Programs - Argument Passing
+    // strtok_r 함수 이용, 공백 기준으로 명령어 parsing 구현
+    char *arg_list[128];
+    char *token, *save_ptr;
+    int token_count = 0;
+
+    token = strtok_r(file_name, " ", &save_ptr);
+    arg_list[token_count] = token;
+
+    while(token!=NULL){
+        token = strtok_r(NULL, " ", &save_ptr);
+        token_count++;
+        arg_list[token_count] = token;
+    }
+
+    /*for (token = strtok_r (file_name, " ", &save_ptr); token != NULL;
+         token = strtok_r (NULL, " ", &save_ptr)){
+
+        arg_list[token_count] = token;
+        token_count++;
+
+    }*/
+
+    // *************************ADDED LINE ENDS HERE************************* //
+
+/*
+    // ******************************LINE ADDED****************************** //
+    // Project 2-1 : User Programs - Argument Passing
+    char file_name_copy[128];
+    memcpy(file_name_copy, file_name, strlen(file_name) + EOL);
+    // EOL(Sentinel)까지 포함하여 memecpy
+    // *************************ADDED LINE ENDS HERE************************* //
+*/
+
 	/* We cannot use the intr_frame in the thread structure.
 	 * This is because when current thread rescheduled,
 	 * it stores the execution information to the member. */
-	struct intr_frame _if; // 인터럽트 프레임의 구조체 멤버에 필요한 정보를 담는다
+	struct intr_frame _if;
 	_if.ds = _if.es = _if.ss = SEL_UDSEG;
 	_if.cs = SEL_UCSEG;
 	_if.eflags = FLAG_IF | FLAG_MBS;
@@ -180,31 +323,39 @@ int process_exec (void *f_name) {
 	/* We first kill the current context */
 	process_cleanup ();
 
-    // ******************************project2****************************** //
-	/* And then load the binary -> ELF 실행파일 로드*/
+    // ******************************LINE MODDED****************************** //
+	/* And then load the binary */
 	success = load (file_name, &_if);
-    // *************************project2************************* //
+    /*memset(&_if, 0, sizeof _if);
+    success = load(file_name_copy, &_if);*/
+    // *************************ADDED LINE ENDS HERE************************* //
 
 	/* If load failed, quit. */
-    palloc_free_page (file_name);
 	if (!success) {
+        palloc_free_page (file_name);
         return -1;
     }
-    // ******************************project2****************************** //
+
+    // ******************************LINE ADDED****************************** //
     // Project 2-1 : User Programs - Argument Passing
+
+    argument_stack(arg_list, token_count, &_if);
+
     // hex dump for Debugging
     // !!! CAUTION !!! hex_dump 는 매개변수를 pos, buffer, size, boolean 로 받는다. Defined in stdio.c
     // Dumps the SIZE bytes in BUF to the console as hex bytes arranged 16 per line.
     // Numeric offsets are also included, starting at OFS for the first byte in BUF.
     // If ASCII is true then the corresponding ASCII characters are also rendered alongside.
 
+    /*hex_dump(_if.rsp, _if.rsp, KERN_BASE - _if.rsp, true);*/
+
     // KERN_BASE , USER_STACK 어떤걸 기준으로 hex_dump 할 것인지에 따라 page_fault 오류 야기시킴
     // 0000000047480000  Page fault at 0x47480000: not present error reading page in kernel context. 의 원인.
     // Gitbook Project 2 : USER PROGRAMS - Introduction - Virtual Memory Layout~Accessing User Memory를 참조하자.
+    /*hex_dump(_if.rsp, _if.rsp, KERN_BASE - _if.rsp, true);*/
 
-    // hex_dump(_if.rsp, _if.rsp, KERN_BASE - _if.rsp, true);
-    hex_dump(_if.rsp, _if.rsp, USER_STACK - _if.rsp, true);
-    // *************************project2************************* //
+    // hex_dump(_if.rsp, _if.rsp, USER_STACK - _if.rsp, true);
+    // *************************ADDED LINE ENDS HERE************************* //
 
 	/* Start switched process. */
 	do_iret (&_if);
@@ -222,16 +373,31 @@ int process_exec (void *f_name) {
  * This function will be implemented in problem 2-2.  For now, it
  * does nothing. */
 int process_wait (tid_t child_tid UNUSED) {
-	/* XXX: Hint) The pintos exit if process_wait (initd), we recommend you
-	 * XXX:       to add infinite loop here before
-	 * XXX:       implementing the process_wait. */
-    // ******************************project2****************************** //
+    // ******************************LINE ADDED****************************** //
     // Project 2-1 : User Programs - Argument Passing
-    while(true) {
-        // Infinite Loop to fake child wait
+    /* XXX: Hint) The pintos exit if process_wait (initd), we recommend you
+     * XXX:       to add infinite loop here before
+     * XXX:       implementing the process_wait. */
+    /*while(true) {
+        // (TEMPORARY FOR DEBUGGING) Infinite Loop to fake child wait
     }
-    // *************************project2************************* //
-	return -1;
+    return -1;*/
+    /*printf("Waiting Child Process...\n");*/
+    // *************************ADDED LINE ENDS HERE************************* //
+
+    // ******************************LINE ADDED****************************** //
+    // Project 2-2 : User Programs - System Call
+    struct thread *child = get_child(child_tid);
+    if (child == NULL){
+        return -1;
+    }
+    sema_down(&child->wait_sema);
+    int exit_status = child->exit_status;
+    list_remove(&child->child_elem);
+    sema_up(&child->free_sema);
+
+    return exit_status;
+    // *************************ADDED LINE ENDS HERE************************* //
 }
 
 /* Exit the process. This function is called by thread_exit (). */
@@ -242,7 +408,18 @@ void process_exit (void) {
 	 * TODO: project2/process_termination.html).
 	 * TODO: We recommend you to implement process resource cleanup here. */
 
-	process_cleanup ();
+    // Close all Opened file by for loop
+    for (int i=0; i<FDCOUNT_LIMIT; i++)
+    {
+        close(i);
+    }
+    palloc_free_multiple(curr->fd_table, FDT_PAGES);
+    file_close(curr->running);
+
+    sema_up(&curr->wait_sema);
+    sema_down(&curr->free_sema);
+
+    process_cleanup ();
 }
 
 /* Free the current process's resources. */
@@ -355,13 +532,13 @@ void argument_stack(char **argv, int argc, struct intr_frame *if_){
         arg_address[i] = if_->rsp; // arg_address에 인자를 복사한 시작 주소값을 저장해준다
     }
 
-    // 2. SAU = 8 Stack Pointer의 word-alignment 단위는 8byte 단위이다. 따라서 이를 맞추기 위해 0 넣어줌.
+    // 2. Stack Pointer의 word-alignment 단위는 8byte 단위이다. 따라서 이를 맞추기 위해 0 넣어줌.
     while(if_->rsp % SAU != 0){
         if_->rsp--;
         memset(if_->rsp, 0, sizeof(uint8_t));
     }
 
-    // 3. word-align 이후 argv[4]~argv[0]의 주소를 넣어준다
+    // 3. word-align 이후 ~argv[0]의 주소를 넣어준다
     for(int j = argc; j >= 0; j--){
         if_->rsp -= SAU;
         if(j == argc){
@@ -376,10 +553,10 @@ void argument_stack(char **argv, int argc, struct intr_frame *if_){
     memset(if_->rsp, 0, sizeof(void *));
 
     // 5. Set rdi, rsi (rdi : 문자열 목적지 주소, rsi : 문자열 출발지 주소)
-    if_->R.rdi = argc; // rdi에 매개변수 개수 저장
-    if_->R.rsi = if_->rsp + SAU; // rsi에 스택 다음 값 저장 
+    if_->R.rdi = argc;
+    if_->R.rsi = if_->rsp + SAU;
 }
-// *************************project2************************* //
+// *************************ADDED LINE ENDS HERE************************* //
 
 /* Loads an ELF executable from FILE_NAME into the current thread.
  * Stores the executable's entry point into *RIP
@@ -393,23 +570,6 @@ static bool load (const char *file_name, struct intr_frame *if_) {
 	bool success = false;
 	int i;
 
-    // ******************************project2****************************** //
-    // Project 2-1 : User Programs - Argument Passing
-    // strtok_r 함수 이용, 공백 기준으로 명령어 parsing 구현
-    char *arg_list[128];
-    char *token, *save_ptr;
-    int token_count = 0;
-
-    token = strtok_r(file_name, " ", &save_ptr);
-    arg_list[token_count] = token;
-
-    while(token!=NULL){
-        token = strtok_r(NULL, " ", &save_ptr); // 순서 주의
-        token_count++; // 순서 주의
-        arg_list[token_count] = token;
-    }
-    // *************************project2************************* //
-
 	/* Allocate and activate page directory. */
 	t->pml4 = pml4_create ();
 	if (t->pml4 == NULL)
@@ -422,6 +582,15 @@ static bool load (const char *file_name, struct intr_frame *if_) {
 		printf ("load: %s: open failed\n", file_name);
 		goto done;
 	}
+
+    // ******************************LINE ADDED****************************** //
+    // Project 2-2 : User Programs - System Call
+    /* 실행 중인 스레드 t의 running을 실행할 파일로 초기화*/
+    t->running = file;
+
+    /* 현재 오픈한 파일에 다른내용 쓰지 못하게 함 */
+    file_deny_write(file);
+    // *************************ADDED LINE ENDS HERE************************* //
 
 	/* Read and verify executable header. */
 	if (file_read (file, &ehdr, sizeof ehdr) != sizeof ehdr
@@ -492,23 +661,39 @@ static bool load (const char *file_name, struct intr_frame *if_) {
 	if (!setup_stack (if_))
 		goto done;
 
-	/* Start address. 실행파일의 진입점*/
+	/* Start address. */
 	if_->rip = ehdr.e_entry;
 
 	/* TODO: Your code goes here.
 	 * TODO: Implement argument passing (see project2/argument_passing.html). */
-    // ******************************LINE ADDED****************************** //
-    // Project 2-1 : User Programs - Argument Passing
-    argument_stack(arg_list, token_count, if_);
-    // *************************ADDED LINE ENDS HERE************************* //
 
 	success = true;
 
 done:
 	/* We arrive here whether the load is successful or not. */
-	file_close (file);
+    // ******************************LINE MODDED****************************** //
+	/*file_close (file);*/
+    // *************************MODDED LINE ENDS HERE************************* //
 	return success;
 }
+
+// ******************************LINE ADDED****************************** //
+// Project 2 : User Programs - System Call - fork()
+struct thread *get_child(int pid){
+
+    struct thread *curr = thread_current();
+    struct list *child_list = &curr->child_list;
+    struct list_elem *e;
+    if (list_empty(child_list)) return NULL;
+    for (e = list_begin (child_list); e != list_end (child_list); e = list_next (e)){
+        struct thread *t = list_entry(e, struct thread, child_elem);
+        if (t->tid == pid){
+            return t; // 자식 스레드 반환
+        }
+    }
+    return NULL;
+}
+// *************************ADDED LINE ENDS HERE************************* //
 
 
 /* Checks whether PHDR describes a valid, loadable segment in
