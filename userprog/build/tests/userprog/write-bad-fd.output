@@ -1,0 +1,35 @@
+Kernel command line: -q -f put write-bad-fd run write-bad-fd
+0 ~ 9fc00 1
+100000 ~ 13e0000 1
+Pintos booting with: 
+	base_mem: 0x0 ~ 0x9fc00 (Usable: 639 kB)
+	ext_mem: 0x100000 ~ 0x13e0000 (Usable: 19,328 kB)
+Calibrating timer...  232,243,200 loops/s.
+hd0:0: detected 321 sector (160 kB) disk, model "QEMU HARDDISK", serial "QM00001"
+hd0:1: detected 20,160 sector (9 MB) disk, model "QEMU HARDDISK", serial "QM00002"
+hd1:0: detected 103 sector (51 kB) disk, model "QEMU HARDDISK", serial "QM00003"
+Formatting file system...done.
+Boot complete.
+Putting 'write-bad-fd' into the file system...
+Executing 'write-bad-fd':
+Page fault at 0xfffffffffffffff8: not present error reading page in kernel context.
+Interrupt 0x0e (#PF Page-Fault Exception) at rip=8004206f14
+ cr2=fffffffffffffff8 error=               0
+rax ffffffffffffffe0 rbx 0000000000204400 rcx 0000008004000020 rdx 000000000000001f
+rsp 0000008004000ea8 rbp 0000008004000ed0 rsi 0000000000000000 rdi 0000008004000020
+rip 0000008004206f14 r8 0000008004000efc  r9 0000000004209631 r10 0000000000000000
+r11 0000000000000000 r12 0000000000000000 r13 0000000000000000 r14 0000000000000000
+r15 0000000000000000 rflags 00200083
+es: 0010 ds: 0010 cs: 0008 ss: 0010
+Kernel PANIC at ../../userprog/exception.c:97 in kill(): Kernel bug - unexpected interrupt in kernel
+Call stack: 0x8004217e95 0x800421caad 0x800421cc2c 0x8004208f6a 0x8004209388 0x8004219211 0x8004209fb0 0x800421ba76 0x8004206773 0x80042068c0 0x800420617a.
+The `backtrace' program can make call stacks useful.
+Read "Backtraces" in the "Debugging Tools" chapter
+of the Pintos documentation for more information.
+Timer: 64 ticks
+Thread: 36 idle ticks, 28 kernel ticks, 0 user ticks
+hd0:0: 0 reads, 0 writes
+hd0:1: 34 reads, 234 writes
+hd1:0: 103 reads, 0 writes
+Console: 1772 characters output
+Key
