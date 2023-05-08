@@ -72,26 +72,31 @@ int main (void) {
 	/* Clear BSS and get machine's RAM size. */
     // BSS is the area of memory used to hold static variables which must be initialized to zero.
     // Block Started by Symbol (BSS) : 제로 값으로 초기화된 정적 할당 변수가 포함된 데이터 세그먼트의 일부로 컴파일러나 링커에 의해 사용.
+	// 초기화되지 않은 전역 및 정적 변수들이 zero로 초기화되어야 하는 영역인데, 커널이 해주지 않기에 직접 해줘야함 - memset
+	// BSS의 끝과 시작을 _start_bss와 _end_bss로 기록
 	bss_init ();
 
 	/* Break command line into arguments and parse options. */
-	argv = read_command_line ();
+	argv = read_command_line (); // parsing과 별개, 명령어를 arvg - like 배열로 변경만 해주는거, 얘로 run_action실행
 	argv = parse_options (argv);
 
 	/* Initialize ourselves as a thread so we can use locks, then enable console locking. */
     // Debugging Project 2 : User Programs - Argument Passing
-    /*printf("thread_init called in main @init.c AKA pintos main\n");*/
-	thread_init ();
+	thread_init (); // main 스레드 실행... 이 아니라 초기화만 하나?
 	console_init ();
 
 	/* Initialize memory system. */
-	mem_end = palloc_init ();
+	// After calling thread_init(), be sure to initialize the page
+	// allocator before trying to create any threads with thread_create().
+	mem_end = palloc_init (); // page allocator 초기화하고 메모리 크기를 얻음
+	// base와 external 메모리를 알려주고, 이를 popultate함
 	malloc_init ();
 	paging_init (mem_end);
 
 #ifdef USERPROG
-	tss_init ();
-	gdt_init ();
+	tss_init (); // tss: task-state-segment -> 해당 유저 프로세스에 대응하는 커널 프로세스에 대해 커널 스택포인터 끝을 가리킴
+	// 커널 스택을 찾을때 드는 오버헤드를 줄임
+	gdt_init (); // thread_init에서 커널의 gdt만 초기화해줬고, 여기서 유저 gdt초기화해줌
 #endif
 
 	/* Initialize interrupt handlers. */
@@ -104,7 +109,7 @@ int main (void) {
 	syscall_init ();
 #endif
 	/* Start thread scheduler and enable interrupts. */
-	thread_start ();
+	thread_start (); // idle 쓰레드를 만든다, 현재 스레드(main)의 child에 넣는다 .. thread_create에서 kernel_thread임을 지정
 	serial_init_queue ();
 	timer_calibrate ();
 
@@ -121,7 +126,7 @@ int main (void) {
 	printf ("Boot complete.\n");
 
 	/* Run actions specified on kernel command line. */
-	run_actions (argv);
+	run_actions (argv); // -> run_task : process_create_initd()로 입력된 명령어에 대한 프로세스를 실행,
 
 	/* Finish up. */
 	if (power_off_when_done)
@@ -175,7 +180,7 @@ static char **read_command_line (void) {
 	int argc;
 	int i;
 
-	argc = *(uint32_t *) ptov (LOADER_ARG_CNT);
+	argc = *(uint32_t *) ptov (LOADER_ARG_CNT); // ptov: 물리주소 -> 가상주소
 	p = ptov (LOADER_ARGS);
 	end = p + LOADER_ARGS_LEN;
 	for (i = 0; i < argc; i++) {
@@ -242,6 +247,8 @@ static void run_task (char **argv) {
 		run_test (task);
 	} else {
 		process_wait (process_create_initd (task));
+		// process_create_initd로 명령어로 입력된 프로그램에 대한 프로세스 생성
+		// 첫번째 userland프로그램. 이후로는 fork()를 통해서 프로세스를 생성
 	}
 #else
 	run_test (task);
@@ -261,7 +268,7 @@ static void run_actions (char **argv) {
 
 	/* Table of supported actions. */
 	static const struct action actions[] = {
-		{"run", 2, run_task},
+		{"run", 2, run_task}, // run 명령어가 오면 run_task해라
 #ifdef FILESYS
 		{"ls", 1, fsutil_ls},
 		{"cat", 2, fsutil_cat},

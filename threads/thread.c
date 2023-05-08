@@ -128,7 +128,11 @@ void thread_init(void) {
 
     /* Reload the temporal gdt for the kernel
      * This gdt does not include the user context.
-     * The kernel will rebuild the gdt with user context, in gdt_init (). */
+     * The kernel will rebuild the gdt with user context, in gdt_init (). 
+     * gdt : Global Descriptor table - 전역으로 쓰일 디스크립터를 모아놓은 테이블.
+     * 뭐에 대한 디스크립터? -> 각 세그먼트 영역. 각 세그먼트 영역에 대한 데이터를 디스크립터로 만들고, 이를 하나의 테이블에 모아둠
+     * - 메모리의 어디에나 위치할 수 있으나, 위치와 크기는 CPU의 GDTR에 등록
+     * */
     struct desc_ptr gdt_ds = {
             .size = sizeof(gdt) - 1,
             .address = (uint64_t) gdt
@@ -142,16 +146,16 @@ void thread_init(void) {
     next_tick_to_awake = INT64_MAX;
     // *************************ADDED LINE ENDS HERE************************* //
 
-    /* Init the globla thread context */
-    lock_init(&tid_lock);
+    /* Init the global thread context */
+    lock_init(&tid_lock); // allocate_tid가 사용하는 락
     list_init(&ready_list);
     list_init(&destruction_req);
 
     /* Set up a thread structure for the running thread. */
-    initial_thread = running_thread ();
-    init_thread(initial_thread, "main", PRI_DEFAULT);
+    initial_thread = running_thread (); // rsp를 잡고 페이지의 시작으로 내림해서 현재 스레드를 찾아냄, 그냥 주소를 얻어내는것
+    init_thread(initial_thread, "main", PRI_DEFAULT); // "main"이란 이름의 스레드를 실행 
+    // 이안에서 main 스레드의 tf->rsp에 커널 스택 포인터를 저장
     initial_thread->status = THREAD_RUNNING;
-    /*printf("allocate_tid called in thread_init\n"); //Debugging Project 2 : User Programs - Argument Passing*/
     initial_thread->tid = allocate_tid();
 }
 
@@ -355,7 +359,7 @@ void thread_print_stats(void) {
            idle_ticks, kernel_ticks, user_ticks);
 }
 
-/* Creates a new kernel thread named NAME with the given initial
+/* Creates a new kernel thread(커널스레드) named NAME with the given initial
    PRIORITY, which executes FUNCTION passing AUX as the argument,
    and adds it to the ready queue.  Returns the thread identifier
    for the new thread, or TID_ERROR if creation fails.
@@ -382,8 +386,8 @@ tid_t thread_create(const char *name, int priority, thread_func *function, void 
 
     ASSERT(function != NULL);
 
-    /* Allocate thread. */
-    t = palloc_get_page(PAL_ZERO);
+    /* Allocate thread.  */
+    t = palloc_get_page(PAL_ZERO); // 스레드를 위한 single page할당받음, PAL_USER가 set돼있지 않기에 커널 풀에서 페이지를 얻음
     if (t == NULL)
         return TID_ERROR;
 
@@ -431,14 +435,15 @@ tid_t thread_create(const char *name, int priority, thread_func *function, void 
 
     /* Call the kernel_thread if it scheduled.
      * Note) rdi is 1st argument, and rsi is 2nd argument. */
-    t->tf.rip = (uintptr_t) kernel_thread;
-    t->tf.R.rdi = (uint64_t) function;
-    t->tf.R.rsi = (uint64_t) aux;
-    t->tf.ds = SEL_KDSEG;
-    t->tf.es = SEL_KDSEG;
-    t->tf.ss = SEL_KDSEG;
-    t->tf.cs = SEL_KCSEG;
+    t->tf.rip = (uintptr_t) kernel_thread; // rip,즉 pc를 kernel_thread의 주소로 설정 -> kernel_thread는 새로운 스레드의 시작점(기반)
+    t->tf.R.rdi = (uint64_t) function; // kernel_thread 함수에 전달되는 첫번째 인자를 매개변수인 function으로 설정 
+    t->tf.R.rsi = (uint64_t) aux; // 두번째 인자를 aux로 설정
+    t->tf.ds = SEL_KDSEG; // tf필드의 ds(data segement)값을 커널 데이터 세그먼트 디스크립터로 설정
+    t->tf.es = SEL_KDSEG; // es: extra segment
+    t->tf.ss = SEL_KDSEG; // ss: 스택 세그먼트
+    t->tf.cs = SEL_KCSEG; // cs: code segment
     t->tf.eflags = FLAG_IF;
+    // 위의 GDT셀렉터들은 각 세그먼트에 대한 디스크립터
 
     /* Add to run queue. */
     thread_unblock(t);
@@ -735,7 +740,7 @@ static void idle(void *idle_started_ UNUSED) {
     }
 }
 
-/* Function used as the basis for a kernel thread. */
+/* Function used as the basis for a kernel thread.  */
 static void kernel_thread(thread_func *function, void *aux) {
     ASSERT(function != NULL);
 
@@ -745,8 +750,7 @@ static void kernel_thread(thread_func *function, void *aux) {
 }
 
 
-/* Does basic initialization of T as a blocked thread named
-   NAME. */
+/* Does basic initialization of T as a blocked thread named NAME. */
 static void init_thread(struct thread *t, const char *name, int priority) {
     ASSERT(t != NULL);
     ASSERT(PRI_MIN <= priority && priority <= PRI_MAX);
@@ -755,7 +759,8 @@ static void init_thread(struct thread *t, const char *name, int priority) {
     memset(t, 0, sizeof *t);
     t->status = THREAD_BLOCKED;
     strlcpy(t->name, name, sizeof t->name);
-    t->tf.rsp = (uint64_t) t + PGSIZE - sizeof(void *);
+    t->tf.rsp = (uint64_t) t + PGSIZE - sizeof(void *); // main에서 호출시, rsp에 커널 스택 포인터 저장
+    // PGSIZE - sizeof(void *) = 스택의 가장 아래위치(스택 top) - 스택은 아래로크니까!
     t->priority = priority;
     t->magic = THREAD_MAGIC;
 
@@ -791,10 +796,10 @@ static struct thread *next_thread_to_run(void) {
 }
 
 /* Use iretq to launch the thread */
-void do_iret(struct intr_frame *tf) {
+void do_iret(struct intr_frame *tf) { // 인터럽트 프레임에 저장된 값들을 레지스터 구조체에 저장
     __asm __volatile(
-            "movq %0, %%rsp\n"
-            "movq 0(%%rsp),%%r15\n"
+            "movq %0, %%rsp\n"      // 해당 구조체가 들어있는 메모리에서 가장 낮은 값의 주소(가상주소)
+            "movq 0(%%rsp),%%r15\n" // 인터럽트 프레임 tf에 있는 %%rsp 가 가리키는 값을 레지스터에 넣으세요!
             "movq 8(%%rsp),%%r14\n"
             "movq 16(%%rsp),%%r13\n"
             "movq 24(%%rsp),%%r12\n"
@@ -812,7 +817,7 @@ void do_iret(struct intr_frame *tf) {
             "addq $120,%%rsp\n"
             "movw 8(%%rsp),%%ds\n"
             "movw (%%rsp),%%es\n"
-            "addq $32, %%rsp\n"
+            "addq $32, %%rsp\n" // arg.c 의 main함수로 이동
             "iretq"
             : : "g" ((uint64_t) tf) : "memory");
 }

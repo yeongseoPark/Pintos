@@ -120,13 +120,11 @@ struct thread {
     struct list_elem donation_elem; // for Multiple Donation - Donor Thread
     // *************************ADDED LINE ENDS HERE************************* //
 
-
-
     // ******************************LINE ADDED****************************** //
     // Project 2-2-1: User Programs - System Call - Basics
     int exit_status; // System Call 구현시 상태 체크 위한 플래그 변수. Used in userprog/syscall.c
 
-    struct intr_frame parent_if;
+    struct intr_frame parent_if; // fork시 user stack 정보를 담는 intr_frame
 
     struct list child_list;
     struct list_elem child_elem;

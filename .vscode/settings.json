@@ -11,6 +11,7 @@
         "stddef.h": "c",
         "interrupt.h": "c",
         "inttypes.h": "c",
-        "thread.h": "c"
+        "thread.h": "c",
+        "stdlib.h": "c"
     }
 }

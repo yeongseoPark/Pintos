@@ -8,7 +8,7 @@
 
 struct file {
     struct inode *inode;
-    off_t pos;
+    off_t pos; // 현재 읽는 위치
     bool deny_write;
 };
 // *************************ADDED LINE ENDS HERE************************* //
@@ -30,7 +30,7 @@ off_t file_write_at (struct file *, const void *, off_t size, off_t start);
 
 /* Preventing writes. */
 void file_deny_write (struct file *);
-void file_allow_write (struct file *);
+void file_allow_write (struct file *); // 얘가 5번째(쓰기 실행권한)
 
 /* File position. */
 void file_seek (struct file *, off_t);

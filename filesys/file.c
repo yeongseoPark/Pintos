@@ -105,12 +105,20 @@ off_t file_write_at (struct file *file, const void *buffer, off_t size,
 }
 
 /* Prevents write operations on FILE's underlying inode
- * until file_allow_write() is called or FILE is closed. */
+ * until file_allow_write() is called or FILE is closed. 
+ 프로세스가 디스크에서 변경되고 있는 코드를 run하려 들면 예측불가능한 문제가 발생하기 때문에
+ file_deny_write로 이를 막아줌
+ -> load()에서 ELF로드 중에 변경되지않도록 하기 위해서 사용
+ -> file_allow_write로 다시 deny 풀어줌 
+ */
 void file_deny_write (struct file *file) {
 	ASSERT (file != NULL);
-	if (!file->deny_write) {
-		file->deny_write = true;
-		inode_deny_write (file->inode);
+	if (!file->deny_write) { // 만약 파일 구조체 안의 deny_write가 참이 아니라면
+		file->deny_write = true; // 이를 참으로 만들어주고(deny_write상태로 두고)
+		inode_deny_write (file->inode); // inode 구조체의 deny_write_cnt도 더해줌.
+		// 이 inode의 deny_write_cnt가 0이면 써도 되지만, 1 이상이면 무언가를 쓸 수 없는 상태임
+		// deny_write_cnt가 0,1로 구분되지 않고 int값으로 둔 이유는, 
+		// file disk의 실제 물리 파일을 참조하는 링크파일이 여러개일 수 있기 때문인듯.
 	}
 }
 
