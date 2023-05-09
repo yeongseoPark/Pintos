@@ -226,7 +226,9 @@ void *pml4_get_page (uint64_t *pml4, const void *uaddr) {
  * If WRITABLE is true, the new page is read/write;
  * otherwise it is read-only.
  * Returns true if successful, false if memory allocation
- * failed. */
+ * failed.
+ * Upage와 Kpage 간의 mapping
+ *  */
 bool
 pml4_set_page (uint64_t *pml4, void *upage, void *kpage, bool rw) {
 	ASSERT (pg_ofs (upage) == 0);
@@ -262,7 +264,7 @@ pml4_clear_page (uint64_t *pml4, void *upage) {
 
 /* Returns true if the PTE for virtual page VPAGE in PML4 is dirty,
  * that is, if the page has been modified since the PTE was
- * installed.
+ * installed. 
  * Returns false if PML4 contains no PTE for VPAGE. */
 bool
 pml4_is_dirty (uint64_t *pml4, const void *vpage) {

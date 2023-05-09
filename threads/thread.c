@@ -818,7 +818,7 @@ void do_iret(struct intr_frame *tf) { // 인터럽트 프레임에 저장된 값
             "movw 8(%%rsp),%%ds\n"
             "movw (%%rsp),%%es\n"
             "addq $32, %%rsp\n" // arg.c 의 main함수로 이동
-            "iretq"
+            "iretq" // 인터럽트 처리를 완료하고 이전 수행코드로 복원
             : : "g" ((uint64_t) tf) : "memory");
 }
 
