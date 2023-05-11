@@ -20,16 +20,21 @@ static void remove_elem (struct hash *, struct hash_elem *);
 static void rehash (struct hash *);
 
 /* Initializes hash table H to compute hash values using HASH and
-   compare hash elements using LESS, given auxiliary data AUX. */
+   compare hash elements using LESS, given auxiliary data AUX.
+   해시테이블에 들어가는 아이
+   - key : page내의 virtual address  : hash function 통해 인덱스 값으로 변환
+   - value : page에 소속된 hash_elem : hash table에서 해당 elem 찾으면, 이를 통해 해당 page 접근
+    */
 bool
 hash_init (struct hash *h,
 		hash_hash_func *hash, hash_less_func *less, void *aux) {
-	h->elem_cnt = 0;
-	h->bucket_cnt = 4;
-	h->buckets = malloc (sizeof *h->buckets * h->bucket_cnt);
-	h->hash = hash;
-	h->less = less;
-	h->aux = aux;
+	h->elem_cnt = 0; // elem개수 0
+	h->bucket_cnt = 4; // 버킷개수 4
+	h->buckets = malloc (sizeof *h->buckets * h->bucket_cnt); // 버킷을 위한 공간 할당
+	// bucket은 동적할당으로 만드나, bucket에 연결되는 hash_elem은 page구조체 내 멤버이니, 페이지를 생성할때 만들어진다.
+	h->hash = hash; // 해시 함수 등록
+	h->less = less; // 비교 함수??
+	h->aux = aux; // hash 와 less 함수를 위한 auxliary 값
 
 	if (h->buckets != NULL) {
 		hash_clear (h, NULL);
@@ -121,7 +126,7 @@ hash_replace (struct hash *h, struct hash_elem *new) {
    null pointer if no equal element exists in the table. */
 struct hash_elem *
 hash_find (struct hash *h, struct hash_elem *e) {
-	return find_elem (h, find_bucket (h, e), e);
+	return find_elem (h, find_bucket (h, e), e); // 
 }
 
 /* Finds, removes, and returns an element equal to E in hash

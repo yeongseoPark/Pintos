@@ -37,7 +37,7 @@ struct hash_elem {
  * file for an example. */
 #define hash_entry(HASH_ELEM, STRUCT, MEMBER)                   \
 	((STRUCT *) ((uint8_t *) &(HASH_ELEM)->list_elem        \
-		- offsetof (STRUCT, MEMBER.list_elem)))
+		- offsetof (STRUCT, MEMBER->list_elem)))
 
 /* Computes and returns the hash value for hash element E, given
  * auxiliary data AUX. */

@@ -136,7 +136,7 @@ struct thread {
     // Project 2-2-2 : User Programs - System Call - File Descriptor
     struct file **fd_table;
     int fd_idx;
-
+ 
     int stdin_count;
     int stdout_count;
 
@@ -148,7 +148,7 @@ struct thread {
 	uint64_t *pml4;                     /* Page map level 4 */
 #endif
 #ifdef VM
-	/* Table for whole virtual memory owned by thread. */
+	/* Table for whole virtual memory owned by thread. -> vm_entry set역할을 하는 supplemental page table */
 	struct supplemental_page_table spt;
 #endif
 

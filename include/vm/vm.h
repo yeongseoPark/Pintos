@@ -2,6 +2,10 @@
 #define VM_VM_H
 #include <stdbool.h>
 #include "threads/palloc.h"
+#include <hash.h>
+#include "include/threads/vaddr.h" // pg_round_down
+// #include <process.c> // install_page
+
 
 enum vm_type {
 	/* page not initialized */
@@ -46,6 +50,10 @@ struct page {
 	struct frame *frame;   /* Back reference for frame */
 
 	/* Your implementation */
+	/* ㄴ 뭘 구현하라는거임? -> vm_entry, 즉 hash element를 넣는건가? */
+	/* 각 페이지는 supplemental page table에 들어가야 하기에 hash_elem 선언 */
+	struct hash_elem *vm_entry;
+	bool writable;
 
 	/* Per-type data are binded into the union.
 	 * Each function automatically detects the current union */
@@ -59,10 +67,15 @@ struct page {
 	};
 };
 
-/* The representation of "frame" */
+/* The representation of "frame" -> physical memory 
+   frame 구조체 자체는 프로세스의 커널 가상 주소에 위치(커널의 시작이랑 물리메모리 시작이랑 직접 연결돼있어서 이를통해 물리메모리에서의 위치를 알 수 있는듯?)
+*/
 struct frame {
-	void *kva;
-	struct page *page;
+	void *kva; // kernel virtual address
+	struct page *page; // page structure -> 프레임과 연결된 가상 주소의 페이지
+
+	/* 멤버 추가가능 */
+	struct list_elem frame_elem; // vm.c의 frame_table에 들어갈 elem
 };
 
 /* The function table for page operations.
@@ -72,7 +85,7 @@ struct frame {
 struct page_operations {
 	bool (*swap_in) (struct page *, void *);
 	bool (*swap_out) (struct page *);
-	void (*destroy) (struct page *);
+	void (*destroy) (struct page *); // 페이지가 VM_FILE이라면, file.c의 file_backed_destroy 호출됨
 	enum vm_type type;
 };
 
@@ -85,6 +98,7 @@ struct page_operations {
  * We don't want to force you to obey any specific design for this struct.
  * All designs up to you for this. */
 struct supplemental_page_table {
+	struct hash *virtual_entry_set;  // hash table 선언
 };
 
 #include "threads/thread.h"
@@ -108,5 +122,11 @@ bool vm_alloc_page_with_initializer (enum vm_type type, void *upage,
 void vm_dealloc_page (struct page *page);
 bool vm_claim_page (void *va);
 enum vm_type page_get_type (struct page *page);
+
+/* 보조 함수 추가 */
+unsigned page_hash(const struct hash_elem *p_elem, void *aux UNUSED);
+bool page_less(const struct hash_elem *a , const struct hash_elem *b, void *aux);
+bool page_insert(struct hash *h, struct page *p);
+bool page_delete(struct hash* h, struct page *p);
 
 #endif  /* VM_VM_H */

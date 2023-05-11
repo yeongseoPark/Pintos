@@ -329,6 +329,9 @@ int process_exec (void *f_name) {
 	   핀토스의 사용자 프로세스는 ELF파일로부터 읽힌 코드와 데이터를 메모리에 로드하여 실행됨
 	   load()가 하는일 : 페이지테이블 만들고, 파일을 열고, ELF실행파일이 올바른지 확인, ELF의 프로그램 헤더 테이블 읽어서 메모리에 로드, 
 	 */
+
+	/* VM : initialize the set of vm_entries */
+
 	success = load (file_name, &_if); 
     /*memset(&_if, 0, sizeof _if);
     success = load(file_name_copy, &_if);*/
@@ -441,7 +444,7 @@ static void process_cleanup (void) {
 	struct thread *curr = thread_current ();
 
 #ifdef VM
-	supplemental_page_table_kill (&curr->spt);
+	supplemental_page_table_kill (&curr->spt); // 카이스트 강의에서 vm_entries라고 부르는 이 친구 를 삭제
 #endif
 
 	uint64_t *pml4;
@@ -784,6 +787,9 @@ static bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
 	ASSERT (pg_ofs (upage) == 0);
 	ASSERT (ofs % PGSIZE == 0);
 
+	
+
+	// 여긴 지워야 하는듯,,?
 	file_seek (file, ofs);
 	while (read_bytes > 0 || zero_bytes > 0) {
 		/* Do calculate how to fill this page.
@@ -791,6 +797,10 @@ static bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
 		 * and zero the final PAGE_ZERO_BYTES bytes. */
 		size_t page_read_bytes = read_bytes < PGSIZE ? read_bytes : PGSIZE;
 		size_t page_zero_bytes = PGSIZE - page_read_bytes;
+
+			/* create vm_entry(use malloc)*
+	/* setting vm_entry members, offset and size of file to read when virtual page is required, zero byte to pad at the end/
+
 
 		/* Get a page of memory. */
 		uint8_t *kpage = palloc_get_page (PAL_USER);
@@ -852,7 +862,9 @@ static bool install_page (void *upage, void *kpage, bool writable) {
 	return (pml4_get_page (t->pml4, upage) == NULL
 			&& pml4_set_page (t->pml4, upage, kpage, writable));
 }
-#else
+
+/* ----------------- if VM defined ------------------*/
+#else 
 /* From here, codes will be used after project 3.
  * If you want to implement the function for only project 2, implement it on the
  * upper block. */
@@ -897,7 +909,7 @@ static bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
 			return false;
 
 		/* Advance. */
-		read_bytes -= page_read_bytes;
+		read_bytes -= page_read_bytes; 
 		zero_bytes -= page_zero_bytes;
 		upage += PGSIZE;
 	}
