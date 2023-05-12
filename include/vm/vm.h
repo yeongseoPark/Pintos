@@ -3,6 +3,9 @@
 #include <stdbool.h>
 #include "threads/palloc.h"
 
+#include <hash.h>
+
+
 enum vm_type {
 	/* page not initialized */
 	VM_UNINIT = 0,
@@ -12,6 +15,10 @@ enum vm_type {
 	VM_FILE = 2,
 	/* page that hold the page cache, for project 4 */
 	VM_PAGE_CACHE = 3,
+
+
+
+
 
 	/* Bit flags to store state */
 
@@ -45,7 +52,10 @@ struct page {
 	void *va;              /* Address in terms of user space */
 	struct frame *frame;   /* Back reference for frame */
 
-	/* Your implementation */
+	/***** P3 추가 ******/
+	struct hash_elem hash_elem;	// key: page->va, value: struct page
+	bool writable;
+
 
 	/* Per-type data are binded into the union.
 	 * Each function automatically detects the current union */
@@ -63,6 +73,8 @@ struct page {
 struct frame {
 	void *kva;
 	struct page *page;
+	/************ P3 추가 *****************/
+	struct list_elem frame_elem;
 };
 
 /* The function table for page operations.
@@ -85,6 +97,7 @@ struct page_operations {
  * We don't want to force you to obey any specific design for this struct.
  * All designs up to you for this. */
 struct supplemental_page_table {
+	struct hash *spt_hash; 	// hash table		
 };
 
 #include "threads/thread.h"
