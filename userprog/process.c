@@ -869,50 +869,27 @@ static bool lazy_load_segment (struct page *page, void *aux) {
 	/* TODO: Load the segment from the file */
 	/* TODO: This called when the first page fault occurs on address VA. */
 	/* TODO: VA is available when calling this function. */
-	struct info_aux *aux = (struct info_aux*)aux;
+	struct info_aux *info_aux = (struct info_aux*)aux;
 
-	struct file *file = aux->file;
-	off_t ofs = aux->offset;
-	uint32_t read_bytes = aux->read_bytes;
-	uint32_t zero_bytes = aux->zero_bytes;
+	struct file *file = info_aux->file;
+	off_t ofs = info_aux->offset;
+	uint32_t read_bytes = info_aux->read_bytes;
+	uint32_t zero_bytes = info_aux->zero_bytes;
 
-	void* upage = page->va;
-
-	/* #else 위의 load_segment 복붙 */
+	/* 써야할 파일의 오프셋을 원하는 ofs값으로 옮기기 */
 	file_seek (file, ofs);
-	while (read_bytes > 0 || zero_bytes > 0) {
-		/* Do calculate how to fill this page.
-		 * We will read PAGE_READ_BYTES bytes from FILE
-		 * and zero the final PAGE_ZERO_BYTES bytes. */
-		size_t page_read_bytes = read_bytes < PGSIZE ? read_bytes : PGSIZE;
-		size_t page_zero_bytes = PGSIZE - page_read_bytes;
+	
+	// 원하는 파일을 kpage(즉 물리주소)에 로드
+	if (file_read(file, page->frame->kva, read_bytes) != (int) read_bytes) {
+		palloc_free_page(page->frame->kva);
 
-	/* setting vm_entry members, offset and size of file to read when virtual page is required, zero byte to pad at the end/
-
-		/* Get a page of memory. */
-		uint8_t *kpage = palloc_get_page (PAL_USER);
-		if (kpage == NULL)
-			return false;
-
-		/* Load this page. */
-		if (file_read (file, kpage, page_read_bytes) != (int) page_read_bytes) {
-			palloc_free_page (kpage);
-			return false;
-		}
-		memset (kpage + page_read_bytes, 0, page_zero_bytes);
-
-		/* Add the page to the process's address space. */
-		if (!install_page (upage, kpage, page->writable)) {
-			printf("fail\n");
-			palloc_free_page (kpage);
-			return false;
-		}
-
-		/* Advance. */
-		read_bytes -= page_read_bytes;
-		zero_bytes -= page_zero_bytes;
-		upage += PGSIZE;
+		return false;
 	}
+
+	// 파일을 성공적으로 읽어왔음
+	// 4kb중에서 파일을 쓰고 남는 부분은 0으로 채운다
+	memset(page->frame->kva + read_bytes, 0, zero_bytes);
+
 	return true;
 }
 

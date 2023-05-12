@@ -108,14 +108,14 @@ spt_find_page (struct supplemental_page_table *spt UNUSED, void *va UNUSED) {
 	page->va = pg_round_down(va);
 	struct hash_elem *elem;
 
-	elem = hash_find(spt->virtual_entry_set, page->vm_entry); // va값(해시의 키값)을 가지고 hash_elem을 찾기에 이게 가능한듯
+	elem = hash_find(spt->spt_hash, &page->hash_elem); // va값(해시의 키값)을 가지고 hash_elem을 찾기에 이게 가능한듯
 	free(page);
 
 	if (elem == NULL) {
 		return NULL;
 	}
 	
-	return hash_entry(elem, struct page, vm_entry);
+	return hash_entry(elem, struct page, hash_elem);
 }
 
 /* Insert PAGE into spt with validation. -> 구현 필요 */
