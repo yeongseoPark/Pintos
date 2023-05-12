@@ -58,11 +58,10 @@ struct page {
 	void *va;              /* Address in terms of user space */
 	struct frame *frame;   /* Back reference for frame */
 
-	/* Your implementation */
-	/* ㄴ 뭘 구현하라는거임? -> vm_entry, 즉 hash element를 넣는건가? */
-	/* 각 페이지는 supplemental page table에 들어가야 하기에 hash_elem 선언 */
-	struct hash_elem *vm_entry;
+	/***** P3 추가 ******/
+	struct hash_elem hash_elem;	// key: page->va, value: struct page
 	bool writable;
+
 
 	/* Per-type data are binded into the union.
 	 * Each function automatically detects the current union */
@@ -107,7 +106,7 @@ struct page_operations {
  * We don't want to force you to obey any specific design for this struct.
  * All designs up to you for this. */
 struct supplemental_page_table {
-	struct hash *virtual_entry_set;  // hash table 선언
+	struct hash *spt_hash; 	// hash table		
 };
 
 #include "threads/thread.h"

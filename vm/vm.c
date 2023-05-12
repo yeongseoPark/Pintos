@@ -9,7 +9,7 @@
 struct list frame_table; // frame entry의 리스트로 구성된 frame table
 // 비어있는 프레임들이 연결돼있는 연결리스트
 // 빈 프레임이 필요할시에 그냥 앞에서 꺼내오면 됨
-struct list_elem *start; // frame_table의 시작점. 여기 선언하는게 맞는지 모르겠음
+static struct list_elem *start = NULL; // frame_table의 시작점. 여기 선언하는게 맞는지 모르겠음
 
 /* Initializes the virtual memory subsystem by invoking each subsystem's
  * intialize codes. */
@@ -108,7 +108,7 @@ spt_find_page (struct supplemental_page_table *spt UNUSED, void *va UNUSED) {
 	page->va = pg_round_down(va);
 	struct hash_elem *elem;
 
-	elem = hash_find(spt, page->vm_entry); // va값(해시의 키값)을 가지고 hash_elem을 찾기에 이게 가능한듯
+	elem = hash_find(spt->virtual_entry_set, page->vm_entry); // va값(해시의 키값)을 가지고 hash_elem을 찾기에 이게 가능한듯
 	free(page);
 
 	if (elem == NULL) {
@@ -130,7 +130,7 @@ spt_insert_page (struct supplemental_page_table *spt UNUSED,
 	/* VA가 주어진 SPT에 있는지 확인도 그냥 hash_insert로 해주면 될듯 */
 
 	/* TODO: Fill this function.  */
-	return page_insert(spt->virtual_entry_set, page);
+	return page_insert(&spt->spt_hash, page);
 }
 
 void
@@ -171,25 +171,24 @@ static struct frame *
 vm_get_frame (void) {
 	struct frame *frame = (struct frame*)malloc(sizeof(struct frame));
 	/* TODO: Fill this function. */
-	void* kernel_va; 
+	ASSERT (frame != NULL);
+	ASSERT (frame->page == NULL);
+
+	frame->kva = palloc_get_page(PAL_USER);		// RAM user pool -> (virtual) kernel VA로 1page 할당
 
 	// 물리프레임을 얻고, 그에 대응되는 kernel가상주소 리턴,
 	// PAL_USER가 set되면 USER_POOL에서 가져온다는데, 그말인즉슨 메모리의 공간이 유저pool과 kernel pool로 구분돼있는건가??
 	// 아니면 그냥 물리프레임에 USER_POOL임을 표시만??
 	// -> 메모리의 공간이 유저풀과 커널풀로 반반씩 나눠져있는게 맞음(pool 구조체의 주석에 써있음)
-	if ((kernel_va = palloc_get_page(PAL_USER)) == NULL) {   
-	/* swap out if page allocation fails - 나중에 구현*/
+	if (frame->kva == NULL) {
 		PANIC("todo");
+		// frame = vm_evict_frame();		// RAM user pool이 없으면 frame에서 evict, 새로 할당
+		// frame->page = NULL;
+		// return frame;
 	}
 
-	frame->kva  = kernel_va;
-	frame->page = NULL; // 물리 프레임만 얻어왔을뿐이니까, 아직 연결된 페이지는 없지...
-
 	list_push_back(&frame_table, &frame->frame_elem);
-
-	/* 얘네를 void* kernel_va 바로 밑으로 올릴 필요가 있나.. ? */
-	ASSERT (frame != NULL);
-	ASSERT (frame->page == NULL);
+	frame->page = NULL;
 	return frame;
 }
 
@@ -230,15 +229,12 @@ vm_dealloc_page (struct page *page) {
 /* Claim the page that allocate on VA. */
 bool
 vm_claim_page (void *va UNUSED) {
-	struct page *page;
+	struct page *page = NULL;
 	/* TODO: Fill this function */
-	// page를 얻고 
-	page = spt_find_page(&thread_current()->spt, va);
-	if (page == NULL) {
+	page = spt_find_page(&thread_current()->spt, va);  // va를 주고, 해당 hash_elem가 속한 page 리턴
+	if (page == NULL)
 		return false;
-	}
 
-	// vm_do_claim_page를 얻은 page를 가지고 호출
 	return vm_do_claim_page (page);
 }
 
@@ -250,7 +246,10 @@ vm_claim_page (void *va UNUSED) {
  */
 static bool
 vm_do_claim_page (struct page *page) {
-	struct frame *frame = vm_get_frame (); // vm_get_frame은 이미 구현돼있음
+	struct frame *frame = vm_get_frame ();
+	struct thread *t = thread_current ();
+
+	ASSERT(frame != NULL);
 
 	/* Set links */
 	frame->page = page;
@@ -262,17 +261,11 @@ vm_do_claim_page (struct page *page) {
 		실제로 그러함(vm_get_frame을 봐라!)
 		본 페이지 테이블인 pml4에 upage와 kpage(즉 물리주소)의 연결을 수행하는 함수가 instal_page
 	*/
-	// if (install_page(page->va, frame->kva, page->writable)) { 
-	// 	return swap_in (page, frame->kva); // 이건 뭐고
-	// }
-
-	struct thread *cur = thread_current();
-	bool writable = page->writable; // [vm.h] struct page에 bool writable; 추가
-	pml4_set_page(cur->pml4, page->va, frame->kva, writable);
-
-	bool res = swap_in (page, frame->kva);
-	
-	return res;
+	if (pml4_get_page (t->pml4, page->va) == NULL && pml4_set_page (t->pml4, page->va, frame->kva, page->writable)){
+			return swap_in(page, frame->kva);
+	}
+	else		// install failed
+		return false;
 }
 
 /* Initialize new supplemental page table -> 구현 필요 
@@ -280,8 +273,7 @@ vm_do_claim_page (struct page *page) {
 */
 void
 supplemental_page_table_init (struct supplemental_page_table *spt UNUSED) {
-	hash_init(spt->virtual_entry_set, page_hash, page_less, NULL); // aux 값을 뭘 넣어야 하지?? -> NULL..
-	// spt->virtual_entry_set에 & 붙여줄 필요가 있나??
+	hash_init(&spt->spt_hash, page_hash, page_less, NULL); // aux 값을 뭘 넣어야 하지?? -> NULL..
 }
 
 /* Copy supplemental page table from src to dst */
@@ -300,49 +292,39 @@ supplemental_page_table_kill (struct supplemental_page_table *spt UNUSED) {
 /* -------- helper function ------------ */
 
 /* 페이지의 가상 주소 값을 해싱을 해주는 함수 */
-unsigned page_hash(const struct hash_elem *p_elem, void *aux UNUSED) {
-	const struct page *page = hash_entry(p_elem, struct page, vm_entry);
-	const void *page_va = page->va;
-
-	// hash_bytes 함수로 해시값 얻어냄
-	return hash_bytes(&page_va, sizeof(page_va));
+unsigned page_hash(const struct hash_elem *p_, void *aux UNUSED)
+{
+	/* given hash_elem, get 페이지 구조체 첫 주소. 
+	 * #define hash_entry(HASH_ELEM, STRUCT, MEMBER)
+	 * elem 주소에서 해당 오프셋 차감
+	*/
+	const struct page *p = hash_entry(p_, struct page, hash_elem);
+	return hash_bytes(&p->va, sizeof(p->va)); 	// Returns a hash of the size bytes starting at buf.
 }
-
 /* 해시 테이블 내의 두 페이지 요소에 대해 페이지의 주소값을 비교 
 	a가 b보다 작으면 true, a가 b보다 같거나 크면 false
 */
-bool page_less(const struct hash_elem *a , const struct hash_elem *b, void *aux) {
-	struct page *page_a = hash_entry(a, struct page, vm_entry);
-	struct page *page_b = hash_entry(b, struct page, vm_entry);
-
-	if (page_a->va < page_b->va) {
-		return true;
-	}
-	else {
-		return false;
-	}
+bool page_less(const struct hash_elem *a, const struct hash_elem *b, void *aux)
+{
+	const struct page *p_a = hash_entry(a, struct page, hash_elem);
+	const struct page *p_b = hash_entry(b, struct page, hash_elem);
+	return p_a->va < p_b ->va;
 }
 
 /* p에 들어있는 hash_elem 구조체를 인자로 받은 해시테이블에 삽입 */
-bool page_insert(struct hash *h, struct page *p) {
-	struct hash_elem *elem = p->vm_entry;
-
-	if (!hash_insert(h, &elem)) {
-		return true; // hash_insert는 성공하면 null pointer 반환
-	} 
-	else {
-		return false;  // 이미 해당 element 있으면 걔를 반환 
-	}
+bool page_insert(struct hash *h, struct page *p) 
+{
+	if (!hash_insert(h, &p->hash_elem))
+		return true;
+	else	
+		return false;
 }
 
 /* p에 들어있는 hash_elem 구조체를 인자로 받은 해시테이블에서 삭제 */
-bool page_delete(struct hash* h, struct page *p) {
-	struct hash_elem *elem = p->vm_entry;
-
-	if (hash_delete(h, &elem)) {
-		return true; // 지우려고 하는 element가 있으면 지우고, 이것을 반환
-	} 
-	else {
-		return false; // 지우려고 하는 element가 테이블에 없으면 null pointer 반환
-	}
+bool page_delete(struct hash *h, struct page *p)
+{
+	if (hash_delete(h, &p->hash_elem)) 
+		return true;
+	else	
+		return false;		
 }
