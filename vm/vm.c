@@ -67,41 +67,29 @@ err:
 }
 
 /* Find VA from spt and return page. On error, return NULL. -> 구현 필요 */
+/* 준코 : UNUSED 지움,  */
 struct page *
-spt_find_page (struct supplemental_page_table *spt UNUSED, void *va UNUSED) {
-	/* TODO: Fill this function. */
-	// va를 가지고 어떻게 해당하는 hash_elem을 찾지??
-	// dummy page를 만들고, 그것의 가상주소를 va로 만든후에 그 페이지의 hash_elem을 넣는다고?? 그러면, 해당 가상주소에 두개의 페이지가 있는거 아님??
-	// struct page *dummy_page = (struct page*)malloc(sizeof(struct page));
-	// dummy_page->va = va;
-
-	struct page *page = (struct page*)malloc(sizeof(struct page)); 
-	page->va = pg_round_down(va);
-	struct hash_elem *elem;
-
-	elem = hash_find(spt, page->vm_entry); // va값(해시의 키값)을 가지고 hash_elem을 찾기에 이게 가능한듯
-	free(page);
+spt_find_page (struct supplemental_page_table *spt, void *va) {
+	struct page page;
+	page.va = pg_round_down(va);
+	struct hash_elem *elem = hash_find(spt-> page_table, &page.hash_elem);
 
 	if (elem == NULL) {
 		return NULL;
 	}
-	
-	return hash_entry(elem, struct page, vm_entry);
+	struct page* result = hash_entry(elem, struct page, vm_entry);
+	ASSERT((va < result-> va + PGSIZE) && VA >= result -> va);
+	return result;
 }
 
 /* Insert PAGE into spt with validation. -> 구현 필요 */
+/* 준코(05/12) : UNUSED 지움 */
 bool
-spt_insert_page (struct supplemental_page_table *spt UNUSED,
-		struct page *page UNUSED) {
-	// int succ = false;
-	/* check virtual address does not exist in given supplemental page table */
-	// if (hash_find(spt->virtual_entry_set, page->vm_entry)) { // 이미 있음
-	// 	return succ;
-	// }
-	/* VA가 주어진 SPT에 있는지 확인도 그냥 hash_insert로 해주면 될듯 */
+spt_insert_page (struct supplemental_page_table *spt,
+		struct page *page) {
+	struct hash_elem *result = hash_insert(spt -> page_table, &page -> hash_elem);
 
-	/* TODO: Fill this function.  */
-	return page_insert(spt->virtual_entry_set, page);
+	return (result == NULL) ? true : false ;
 }
 
 void
@@ -138,28 +126,28 @@ vm_evict_frame (void) {
  * 구현후, 모든 user space page는 이 함수를 통해 할당해야 함
  * page allocation fail은 일단 PANIC("todo")로 두기
  * */
+
+/* 준코 */
 static struct frame *
-vm_get_frame (void) {
-	struct frame *frame = (struct frame*)malloc(sizeof(struct frame));
+*vm_get_frame (void) {
+	struct frame *frame = malloc(sizeof(struct frame));
 	/* TODO: Fill this function. */
 	void* kernel_va; 
 
 	// 물리프레임을 얻고, 그에 대응되는 kernel가상주소 리턴,
 	// PAL_USER가 set되면 USER_POOL에서 가져온다는데, 그말인즉슨 메모리의 공간이 유저pool과 kernel pool로 구분돼있는건가??
 	// 아니면 그냥 물리프레임에 USER_POOL임을 표시만??
-	if ((kernel_va = palloc_get_page(PAL_USER)) == NULL) {   
+	frame->kva  = palloc_get_page(PAL_USER);
+	frame->page = NULL;
+	ASSERT(frame != NULL);
+	ASSERT(frame -> page == NULL);
+
+	if (( frame->kva == NULL) {
+		free(frame);
+		frame = vm_evict_frame();   
 	/* swap out if page allocation fails - 나중에 구현*/
-		PANIC("todo");
 	}
-
-	frame->kva  = kernel_va;
-	frame->page = NULL; // 물리 프레임만 얻어왔을뿐이니까, 아직 연결된 페이지는 없지...
-
-	list_push_back(&frame_table, &frame->frame_elem);
-
-	/* 얘네를 void* kernel_va 바로 밑으로 올릴 필요가 있나.. ? */
-	ASSERT (frame != NULL);
-	ASSERT (frame->page == NULL);
+	ASSERT (frame -> kva != NULL);
 	return frame;
 }
 
@@ -194,19 +182,14 @@ vm_dealloc_page (struct page *page) {
 }
 
 /* Claim the page that allocate on VA. */
+/* 준코(05/12) */
 bool
 vm_claim_page (void *va UNUSED) {
-	struct page *page;
-	/* TODO: Fill this function */
-	// page를 얻고 
+	struct page *page = spt_find_page(&thread_current()->spt, va);
 
-	page = spt_find_page(&thread_current()->spt, va);
 	if (page == NULL) {
 		return false;
 	}
-
-	// vm_do_claim_page를 얻은 page를 가지고 호출
-
 	return vm_do_claim_page (page);
 }
 
@@ -216,9 +199,15 @@ vm_claim_page (void *va UNUSED) {
 	2. MMU를 세팅해서 Virtual address와 physical address의 매핑을 추가함
 	3. 반환값은 함수 동작이 성공적이었는가, 아닌가를 알려줘야 함
  */
+
+/* 준코(05/12) */
 static bool
 vm_do_claim_page (struct page *page) {
 	struct frame *frame = vm_get_frame (); // vm_get_frame은 이미 구현돼있음
+	struct thread *cur = thread_current();
+
+	ASSERT (frame != NULL);
+	ASSERT (page != NULL);
 
 	/* Set links */
 	frame->page = page;
@@ -234,22 +223,30 @@ vm_do_claim_page (struct page *page) {
 	// 	return swap_in (page, frame->kva); // 이건 뭐고
 	// }
 
-	struct thread *cur = thread_current();
-	bool writable = page->writable; // [vm.h] struct page에 bool writable; 추가
-	pml4_set_page(cur->pml4, page->va, frame->kva, writable);
+	if (clock_elem != NULL){
+		list_insert(clock_elem, &frame->elem);
+	}
+	else{
+		list_push_back(&frame_list, &frame->elem);
+	}
 
-	bool res = swap_in (page, frame->kva);
-	
-	return res;
+	if(!pml4_set_page(cur->pml4, page->va, frame->kva, writable)){
+		return false;
+	}
+		 
+	return swap_in(page, frame->kva);
 }
 
 /* Initialize new supplemental page table -> 구현 필요 
 	userprog/process.c의 initd(프로세스가 시작할때)와 __do_fork(프로세스가 포크될때) 호출됨	
 */
+/* 준코(05/12) : UNUSED 지움 */
+/* page_table 정의, spt의 page_table 변경 */
 void
-supplemental_page_table_init (struct supplemental_page_table *spt UNUSED) {
-	hash_init(spt->virtual_entry_set, page_hash, page_less, NULL); // aux 값을 뭘 넣어야 하지?? -> NULL..
-	// spt->virtual_entry_set에 & 붙여줄 필요가 있나??
+supplemental_page_table_init (struct supplemental_page_table *spt) {
+	struct hash* page_table = malloc(sizeof (struct hash));
+	hash_init(page_table, page_hash, page_less, NULL); 
+	spt -> page_table = page_table;
 }
 
 /* Copy supplemental page table from src to dst */

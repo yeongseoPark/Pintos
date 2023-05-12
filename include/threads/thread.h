@@ -143,6 +143,10 @@ struct thread {
     struct file *running;
     // *************************ADDED LINE ENDS HERE************************* //
 
+    /* 준코(05/12) : 쓰레드의 가상 주소 공간을 관리하기 위한 해쉬테이블 */
+    struct hash vm; 
+    /* 준코 끝 */
+
 #ifdef USERPROG
 	/* Owned by userprog/process.c. */
 	uint64_t *pml4;                     /* Page map level 4 */

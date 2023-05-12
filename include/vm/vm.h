@@ -40,6 +40,12 @@ struct thread;
 
 #define VM_TYPE(type) ((type) & 7)
 
+/* 준코(05/12) : 구조체 만들기  */ 
+struct vm_entry{
+	// 내용 추가해야해
+	// PPT 내용 : Hash table(src/lib/kernel/hash.*), Linked list, or etc
+}
+/* 준코 끝 */
 /* The representation of "page".
  * This is kind of "parent class", which has four "child class"es, which are
  * uninit_page, file_page, anon_page, and page cache (project4).
@@ -49,10 +55,8 @@ struct page {
 	void *va;              /* Address in terms of user space */
 	struct frame *frame;   /* Back reference for frame */
 
-	/* Your implementation */
-	/* ㄴ 뭘 구현하라는거임? -> vm_entry, 즉 hash element를 넣는건가? */
-	/* 각 페이지는 supplemental page table에 들어가야 하기에 hash_elem 선언 */
-	struct hash_elem *vm_entry;
+	/* 준코(05/12) has_elem으로 바꿈 */
+	struct hash_elem *hash_elem;
 	bool writable;
 
 	/* Per-type data are binded into the union.

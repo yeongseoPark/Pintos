@@ -149,15 +149,22 @@ page_fault (struct intr_frame *f) {
 	/* Count page faults. */
 	page_fault_cnt++;
 
+
+	/* 준코(05/12) : ppt보고 삭제 */
 	/* If the fault is true fault, show info and exit. */
-	printf ("Page fault at %p: %s error %s page in %s context.\n",
-			fault_addr,
-			not_present ? "not present" : "rights violation",
-			write ? "writing" : "reading",
-			user ? "user" : "kernel");
-	// ******************************LINE MODDED****************************** //
-    /*kill (f);*/
-    exit(-1);
+	// printf ("Page fault at %p: %s error %s page in %s context.\n",
+	// 		fault_addr,
+	// 		not_present ? "not present" : "rights violation",
+	// 		write ? "writing" : "reading",
+	// 		user ? "user" : "kernel");
+	// // ******************************LINE MODDED****************************** //
+    // /*kill (f);*/
+    // exit(-1);
+	/* 준코 끝 */
     // *************************MODDED LINE ENDS HERE************************* //
 }
+
+
+
+
 

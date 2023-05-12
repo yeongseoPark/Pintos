@@ -78,11 +78,19 @@ tid_t process_create_initd (const char *file_name) {
 /* A thread function that launches first user process.
 	첫번째 유저 프로세스를 실행하는 함수
  */
+/* start_process */
 static void initd (void *f_name) {
 #ifdef VM
 	supplemental_page_table_init (&thread_current ()->spt);
 #endif
 
+/* 준코(05/12) */
+/* Initializing the set of vm_entries. ex) hash table */
+	
+/* Initialize interrupt frame and load executable */
+
+	memset(&if_, 0, sizeof if_);
+/* 준코 끝 */	
 	process_init (); // 제대로된 스레드인지를 확인하는 것 만으로도 제대로 된 프로세스인지를 알 수 있음
 
 	if (process_exec (f_name) < 0)
@@ -415,6 +423,7 @@ int process_wait (tid_t child_tid UNUSED) {
 /* Exit the process. This function is called by thread_exit (). */
 void process_exit (void) {
 	struct thread *curr = thread_current ();
+	uint32_t *pd; /* 준코(05/12) */
 	/* TODO: Your code goes here.
 	 * TODO: Implement process termination message (see
 	 * TODO: project2/process_termination.html).
@@ -427,6 +436,10 @@ void process_exit (void) {
     }
     palloc_free_multiple(curr->fd_table, FDT_PAGES);
     file_close(curr->running);
+
+	/* 준코(05/12) */
+	/* vm_entry delete 함수 추가해야 함 */
+	pd = curr->pagedir;
 
     sema_up(&curr->wait_sema); // 부모를 깨운다
     sema_down(&curr->free_sema); 
@@ -572,6 +585,18 @@ void argument_stack(char **argv, int argc, struct intr_frame *if_){
     // 5. Set rdi, rsi (rdi : 문자열 목적지 주소, rsi : 문자열 출발지 주소)
     if_->R.rdi = argc;
     if_->R.rsi = if_->rsp + SAU;
+}
+
+/* 준코(05/12) : ppt 보고 만듬 */
+/* page fault 다룰때 호출 */
+/* page fault 발생하면, 물리 메모리 할당한다. */
+/* 디스크에서 물리 메모리로 파일 load한다.(load_file()) */
+/* 물리 메모리로 로드 후 관련된 PTE 업데이트한다.(install_page()) */
+bool handle_mm_fault(struct vm_entry *vme)
+{
+	/* 물리메모리 할당 */
+	/* load_file(void* akddr, struct vm_entry *vme) */
+	/* install_page(void *upage, void *kpage, bool writable) */
 }
 // *************************ADDED LINE ENDS HERE************************* //
 
@@ -781,6 +806,11 @@ static bool install_page (void *upage, void *kpage, bool writable);
  *
  * Return true if successful, false if a memory allocation error
  * or disk read error occurs. */
+
+/* 준코(05/12) */
+/* 가상 주소 공간과 관련된 구조체 초기화하는 함수 만들기 */
+/* binary file을 가상 주소 공간으로 load하는 구문 삭제 */
+/* 다음 3가지를 추가하기 1.vm_entry 구조체 할당 2.필드값 초기화 3.해쉬테이블에 삽입*/
 static bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
 		uint32_t read_bytes, uint32_t zero_bytes, bool writable) {
 	ASSERT ((read_bytes + zero_bytes) % PGSIZE == 0);
@@ -801,25 +831,32 @@ static bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
 			/* create vm_entry(use malloc)*
 	/* setting vm_entry members, offset and size of file to read when virtual page is required, zero byte to pad at the end/
 
-
+		/* 준코(05/12) : ppt에서 삭제하래서 주석처리 */
 		/* Get a page of memory. */
-		uint8_t *kpage = palloc_get_page (PAL_USER);
-		if (kpage == NULL)
-			return false;
+		// uint8_t *kpage = palloc_get_page (PAL_USER);
+		// if (kpage == NULL)
+		// 	return false;
 
-		/* Load this page. */
-		if (file_read (file, kpage, page_read_bytes) != (int) page_read_bytes) {
-			palloc_free_page (kpage);
-			return false;
-		}
-		memset (kpage + page_read_bytes, 0, page_zero_bytes);
+		// /* Load this page. */
+		// if (file_read (file, kpage, page_read_bytes) != (int) page_read_bytes) {
+		// 	palloc_free_page (kpage);
+		// 	return false;
+		// }
+		// memset (kpage + page_read_bytes, 0, page_zero_bytes);
 
-		/* Add the page to the process's address space. */
-		if (!install_page (upage, kpage, writable)) {
-			printf("fail\n");
-			palloc_free_page (kpage);
-			return false;
-		}
+		// /* Add the page to the process's address space. */
+		// if (!install_page (upage, kpage, writable)) {
+		// 	printf("fail\n");
+		// 	palloc_free_page (kpage);
+		// 	return false;
+		// }
+		/* 준코(05/12) : 추가부분*/
+
+		/* vm_entry 생성 (malloc 사용) */
+		/* vm_entry 원소, offset, 가상 페이지가 요구할 때 읽을 파일의 크기 */
+		/* insert_vme() 사용하여 vm_entry를 hash table에 넣기 */
+
+		/* 준코 끝 */
 
 		/* Advance. */
 		read_bytes -= page_read_bytes;
@@ -842,6 +879,11 @@ static bool setup_stack (struct intr_frame *if_) {
 		else
 			palloc_free_page (kpage);
 	}
+
+	/* 준코(05/12) */
+	/* vm_entry 생성 */
+	/* vm_entry 원소 설치 */
+	/* insert_vme()를 사용해 vm_entry를 해쉬 테이블에 추가 */
 	return success;
 }
 
