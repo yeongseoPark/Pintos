@@ -9,6 +9,7 @@
 struct list frame_table; // frame entry의 리스트로 구성된 frame table
 // 비어있는 프레임들이 연결돼있는 연결리스트
 // 빈 프레임이 필요할시에 그냥 앞에서 꺼내오면 됨
+struct list_elem *start; // frame_table의 시작점. 여기 선언하는게 맞는지 모르겠음
 
 /* Initializes the virtual memory subsystem by invoking each subsystem's
  * intialize codes. */
@@ -22,6 +23,8 @@ vm_init (void) {
 	register_inspect_intr ();
 	/* DO NOT MODIFY UPPER LINES. */
 	/* TODO: Your code goes here. */
+	list_init(&frame_table); // 가상 메모리 초기화와 함께, 빈 프레임들을 저장한 frame_table 초기화
+	start = list_begin(&frame_table);
 }
 
 /* Get the type of the page. This function is useful if you want to know the
@@ -45,7 +48,10 @@ static struct frame *vm_evict_frame (void);
 
 /* Create the pending page object with initializer. If you want to create a
  * page, do not create it directly and make it through this function or
- * `vm_alloc_page`. */
+ * `vm_alloc_page`. 
+ * 페이지 구조체 할당하고, 타입에 따른 initializer 세팅하고
+ * 제어권 유저 프로그램에게 돌려줌
+ * */
 bool
 vm_alloc_page_with_initializer (enum vm_type type, void *upage, bool writable,
 		vm_initializer *init, void *aux) {
@@ -54,13 +60,36 @@ vm_alloc_page_with_initializer (enum vm_type type, void *upage, bool writable,
 
 	struct supplemental_page_table *spt = &thread_current ()->spt;
 
-	/* Check wheter the upage is already occupied or not. */
+	/* Check wheter the upage(va) is already occupied or not. */
 	if (spt_find_page (spt, upage) == NULL) {
 		/* TODO: Create the page, fetch the initialier according to the VM type,
 		 * TODO: and then create "uninit" page struct by calling uninit_new. You
 		 * TODO: should modify the field after calling the uninit_new. */
+		struct page *page = (struct page*)malloc(sizeof(struct page));
+
+	// initializerFunc라는 타입(밑과 같은 형태의 함수 포인터)를 선언
+		typedef bool (*initializerFunc)(struct page *, enum vm_type, void *); 
+		initializerFunc initializer = NULL;	
+
+	// 타입에따라서 initializer의 종류를 설정
+		switch(type) { 
+			case VM_ANON:
+				initializer = anon_initializer;
+				break;
+
+			case VM_FILE:
+				initializer = file_backed_initializer;
+				break;
+		}
+
+		// uninit 페이지를 생성
+		uninit_new(page, upage, init, type, aux, initializer); // upage가 곧 va
+		// 두번째 인자(va)는 호출시에 lazy_load_segment가 들어간다.
+
+		page->writable = writable;
 
 		/* TODO: Insert the page into the spt. */
+		return spt_insert_page(spt, page);
 	}
 err:
 	return false;
@@ -147,6 +176,7 @@ vm_get_frame (void) {
 	// 물리프레임을 얻고, 그에 대응되는 kernel가상주소 리턴,
 	// PAL_USER가 set되면 USER_POOL에서 가져온다는데, 그말인즉슨 메모리의 공간이 유저pool과 kernel pool로 구분돼있는건가??
 	// 아니면 그냥 물리프레임에 USER_POOL임을 표시만??
+	// -> 메모리의 공간이 유저풀과 커널풀로 반반씩 나눠져있는게 맞음(pool 구조체의 주석에 써있음)
 	if ((kernel_va = palloc_get_page(PAL_USER)) == NULL) {   
 	/* swap out if page allocation fails - 나중에 구현*/
 		PANIC("todo");
@@ -173,7 +203,9 @@ static bool
 vm_handle_wp (struct page *page UNUSED) {
 }
 
-/* Return true on success */
+/* Return true on success
+	addr에 해당하는 페이지를 찾아서, 물리 프레임과 연결시켜줌	
+ */
 bool
 vm_try_handle_fault (struct intr_frame *f UNUSED, void *addr UNUSED,
 		bool user UNUSED, bool write UNUSED, bool not_present UNUSED) {
@@ -181,6 +213,8 @@ vm_try_handle_fault (struct intr_frame *f UNUSED, void *addr UNUSED,
 	struct page *page = NULL;
 	/* TODO: Validate the fault */
 	/* TODO: Your code goes here */
+	/* spt_find_page로 spt에서 페이지 찾아옴 */
+	page = spt_find_page(spt, addr);
 
 	return vm_do_claim_page (page);
 }
@@ -199,14 +233,12 @@ vm_claim_page (void *va UNUSED) {
 	struct page *page;
 	/* TODO: Fill this function */
 	// page를 얻고 
-
 	page = spt_find_page(&thread_current()->spt, va);
 	if (page == NULL) {
 		return false;
 	}
 
 	// vm_do_claim_page를 얻은 page를 가지고 호출
-
 	return vm_do_claim_page (page);
 }
 

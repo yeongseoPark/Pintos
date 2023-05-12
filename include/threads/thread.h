@@ -150,6 +150,7 @@ struct thread {
 #ifdef VM
 	/* Table for whole virtual memory owned by thread. -> vm_entry set역할을 하는 supplemental page table */
 	struct supplemental_page_table spt;
+   void* stack_bottom; // 이게 왜필요함? : 스택은 lazy loading이 아니라 바로 생성되기때문에 따로 기록해주는듯
 #endif
 
 	/* Owned by thread.c. */

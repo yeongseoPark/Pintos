@@ -42,10 +42,17 @@ uninit_new (struct page *page, void *va, vm_initializer *init,
 	};
 }
 
-/* Initalize the page on first fault */
+/* 
+	인자로 받은 타입에 맞게 페이지를 초기화
+	Initalize the page on first fault -> uninit type의 swap_in 함수가 얘임
+   vm/anon.c의 vm_anon_init과 anon_initializer를 필요하면 수정할 수도 있다는데??
+
+   page fault() -> vm_try_handle_fault() -> vm_do_claim_page() -> swap_in() -> uninit_initialize() ->
+   각 타입에 맞는 initializer와 vm_init()호출 
+ */
 static bool
 uninit_initialize (struct page *page, void *kva) {
-	struct uninit_page *uninit = &page->uninit;
+	struct uninit_page *uninit = &page->uninit; // 페이지 구조체 내부의 union 안의 uninit
 
 	/* Fetch first, page_initialize may overwrite the values */
 	vm_initializer *init = uninit->init;
