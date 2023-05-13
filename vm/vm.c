@@ -8,6 +8,17 @@
 struct list frame_table; // frame entry의 리스트로 구성된 frame table
 // 비어있는 프레임들이 연결돼있는 연결리스트
 // 빈 프레임이 필요할시에 그냥 앞에서 꺼내오면 됨
+/* 준코(05/13) 함수 선언 */
+unsigned page_hash(const struct hash_elem *p_, void *aux UNUSED);
+bool page_less(const struct hash_elem *a, const struct hash_elem *b, void *aux);
+unsigned page_hash(const struct hash_elem *p_, void *aux UNUSED);
+bool page_less(const struct hash_elem *a, const struct hash_elem *b, void *aux);
+bool page_insert(struct hash *h, struct page *p);
+bool page_delete(struct hash *h, struct page *p);
+
+struct list frame_table;
+static struct list_elem *start = NULL;
+/* 끝 */
 
 /* Initializes the virtual memory subsystem by invoking each subsystem's
  * intialize codes. */
@@ -63,6 +74,8 @@ bool vm_alloc_page_with_initializer(enum vm_type type, void *upage, bool writabl
 		 * TODO: should modify the field after calling the uninit_new. */
 
 		/* TODO: Insert the page into the spt. */
+		/* 준코(05/13) */
+		struct page *page = (struct page *)calloc(1, sizeof(struct page));
 	}
 err:
 	return false;
@@ -70,12 +83,13 @@ err:
 
 /* Find VA from spt and return page. On error, return NULL. -> 구현 필요 */
 /* 준코 : UNUSED 지움,  */
+/* malloc, free */
 struct page *
 spt_find_page(struct supplemental_page_table *spt, void *va)
 {
-	struct page page;
-	page.va = pg_round_down(va);
-	struct hash_elem *elem = hash_find(spt->page_table, &page.hash_elem);
+	struct page *page =  (struct page *)malloc(sizeof(struct page));
+	page->va = pg_round_down(va);
+	struct hash_elem *elem = hash_find(spt->page_table, &page->hash_elem);
 
 	if (elem == NULL)
 	{
@@ -88,12 +102,11 @@ spt_find_page(struct supplemental_page_table *spt, void *va)
 
 /* Insert PAGE into spt with validation. -> 구현 필요 */
 /* 준코(05/12) : UNUSED 지움 */
+
 bool spt_insert_page(struct supplemental_page_table *spt,
 					 struct page *page)
 {
-	struct hash_elem *result = hash_insert(&spt->page_table, &page->hash_elem);
-
-	return (result == NULL) ? true : false;
+	return page_insert(&spt->page_table, page);
 }
 
 void spt_remove_page(struct supplemental_page_table *spt, struct page *page)
@@ -134,27 +147,24 @@ vm_evict_frame(void)
  * */
 
 /* 준코 */
-static struct frame **vm_get_frame(void)
+static struct frame *vm_get_frame(void)
 {
-	struct frame *frame = malloc(sizeof(struct frame));
-	/* TODO: Fill this function. */
-	void *kernel_va;
+	struct frame *frame = (struct frame *)malloc(sizeof(struct frame));
 
-	// 물리프레임을 얻고, 그에 대응되는 kernel가상주소 리턴,
-	// PAL_USER가 set되면 USER_POOL에서 가져온다는데, 그말인즉슨 메모리의 공간이 유저pool과 kernel pool로 구분돼있는건가??
-	// 아니면 그냥 물리프레임에 USER_POOL임을 표시만??
-	frame->kva = palloc_get_page(PAL_USER);
-	frame->page = NULL;
 	ASSERT(frame != NULL);
 	ASSERT(frame->page == NULL);
 
+	frame->kva = palloc_get_page(PAL_USER);
+
 	if (frame->kva == NULL)
 	{
-		free(frame);
-		frame = vm_evict_frame();
+		PANIC("todo");
+		// free(frame);
+		// frame = vm_evict_frame();
 		/* swap out if page allocation fails - 나중에 구현*/
 	}
-	ASSERT(frame->kva != NULL);
+	list_push_back(&frame_table, &frame->frame_elem);
+	frame->page = NULL;
 	return frame;
 }
 
@@ -240,7 +250,7 @@ vm_do_claim_page(struct page *page)
 	// else{
 	// 	list_push_back(&frame_list, &frame.elem);
 	// }
-
+/* pm14_get_page는 확인 안해도되냐? */
 	if (!pml4_set_page(cur->pml4, page->va, frame->kva, NULL))
 	{
 		return false;
@@ -256,9 +266,7 @@ vm_do_claim_page(struct page *page)
 /* page_table 정의, spt의 page_table 변경 */
 void supplemental_page_table_init(struct supplemental_page_table *spt)
 {
-	struct hash *page_table = malloc(sizeof(struct hash));
-	hash_init(page_table, page_hash, page_less, NULL);
-	spt->page_table = page_table;
+	hash_init(&spt->page_table, page_hash, page_less, NULL);
 }
 
 /* Copy supplemental page table from src to dst */
@@ -277,13 +285,13 @@ void supplemental_page_table_kill(struct supplemental_page_table *spt UNUSED)
 /* -------- helper function ------------ */
 
 /* 페이지의 가상 주소 값을 해싱을 해주는 함수 */
-unsigned page_hash(const struct hash_elem *p_elem, void *aux UNUSED)
+unsigned page_hash(const struct hash_elem *p_, void *aux UNUSED)
 {
 	const struct page *page = hash_entry(p_elem, struct page, hash_elem);
-	const void *page_va = page->va;
 
 	// hash_bytes 함수로 해시값 얻어냄
-	return hash_bytes(&page_va, sizeof(page_va));
+	/* 준코(05/13) */
+	return hash_bytes(&p_->list_elem, sizeof(p_->list_elem));
 }
 
 /* 해시 테이블 내의 두 페이지 요소에 대해 페이지의 주소값을 비교
@@ -294,22 +302,23 @@ bool page_less(const struct hash_elem *a, const struct hash_elem *b, void *aux)
 	struct page *page_a = hash_entry(a, struct page, hash_elem);
 	struct page *page_b = hash_entry(b, struct page, hash_elem);
 
-	if (page_a->va < page_b->va)
-	{
-		return true;
-	}
-	else
-	{
-		return false;
-	}
+	return page_a->va < page_b->va;
+
+	/* 준코 */
+	// if (page_a->va < page_b->va)
+	// {
+	// 	return true;
+	// }
+	// else
+	// {
+	// 	return false;
+	// }
 }
 
 /* p에 들어있는 hash_elem 구조체를 인자로 받은 해시테이블에 삽입 */
 bool page_insert(struct hash *h, struct page *p)
 {
-	struct hash_elem *elem = &p->hash_elem;
-
-	if (!hash_insert(h, &elem))
+	if (!hash_insert(h, &p->hash_elem))
 	{
 		return true; // hash_insert는 성공하면 null pointer 반환
 	}
@@ -322,9 +331,7 @@ bool page_insert(struct hash *h, struct page *p)
 /* p에 들어있는 hash_elem 구조체를 인자로 받은 해시테이블에서 삭제 */
 bool page_delete(struct hash *h, struct page *p)
 {
-	struct hash_elem elem = p->hash_elem;
-
-	if (hash_delete(h, &elem))
+	if (hash_delete(h, &p->hash_elem))
 	{
 		return true; // 지우려고 하는 element가 있으면 지우고, 이것을 반환
 	}

@@ -59,10 +59,9 @@ struct page
 	void *va;			 /* Address in terms of user space */
 	struct frame *frame; /* Back reference for frame */
 
-	/* 준코(05/12) has_elem으로 바꿈 */
+	/* 준코(05/12) hash_elem으로 바꿈 */
 	struct hash_elem hash_elem;
 	bool writable;
-	struct hash_elem;
 
 	/* Per-type data are binded into the union.
 	 * Each function automatically detects the current union */
