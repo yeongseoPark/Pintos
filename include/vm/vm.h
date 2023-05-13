@@ -3,8 +3,8 @@
 #include <stdbool.h>
 #include "threads/palloc.h"
 #include <hash.h>
-#include "include/threads/vaddr.h" // pg_round_down
-// #include <process.c> // install_page
+#include "include/threads/vaddr.h"// pg_round_down
+//#include <process.c> // install_page
 
 enum vm_type
 {

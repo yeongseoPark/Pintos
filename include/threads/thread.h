@@ -152,6 +152,11 @@ struct thread
 #ifdef VM
    /* Table for whole virtual memory owned by thread. -> hash_elem set역할을 하는 supplemental page table */
    struct supplemental_page_table spt;
+
+   /* 준코(05/13) */
+   void* stack_bottom;
+   void* rsp_stack;
+   void* mmap_addr;
 #endif
 
    /* Owned by thread.c. */
