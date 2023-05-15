@@ -4,8 +4,8 @@ Kernel command line: -q -f put exec-read put sample.txt put child-read run exec-
 Pintos booting with: 
 	base_mem: 0x0 ~ 0x9fc00 (Usable: 639 kB)
 	ext_mem: 0x100000 ~ 0x13e0000 (Usable: 19,328 kB)
-Calibrating timer...  261,734,400 loops/s.
-hd0:0: detected 321 sector (160 kB) disk, model "QEMU HARDDISK", serial "QM00001"
+Calibrating timer...  209,715,200 loops/s.
+hd0:0: detected 329 sector (164 kB) disk, model "QEMU HARDDISK", serial "QM00001"
 hd0:1: detected 20,160 sector (9 MB) disk, model "QEMU HARDDISK", serial "QM00002"
 hd1:0: detected 229 sector (114 kB) disk, model "QEMU HARDDISK", serial "QM00003"
 hd1:1: detected 8,064 sector (3 MB) disk, model "QEMU HARDDISK", serial "QM00004"
@@ -15,16 +15,27 @@ Putting 'exec-read' into the file system...
 Putting 'sample.txt' into the file system...
 Putting 'child-read' into the file system...
 Executing 'exec-read':
-Kernel PANIC at ../../lib/kernel/list.c:144 in list_insert(): assertion `is_interior (before) || is_tail (before)' failed.
-Call stack: 0x8004217ec2 0x800421840b 0x80042186b3 0x8004220b4e 0x8004220d11 0x8004220c55 0x800421ca93 0x8004208fca 0x80042093e8 0x8004220ddc 0x800421b524 0x800420797b.
+(exec-read) begin
+(exec-read) open "sample.txt"
+(exec-read) read "sample.txt" first 20 bytes
+Interrupt 0x0d (#GP General Protection Exception) at rip=800422155f
+ cr2=0000000000605f45 error=               0
+rax 48c87d894840ec6b rbx 0000000000000000 rcx 0000000000000080 rdx 48c87d894840ec83
+rsp 0000008004256e70 rbp 0000008004256eb0 rsi 0000008004245228 rdi 0000008004256e88
+rip 000000800422155f r8 0000000000000000  r9 0000000000000000 r10 0000000000000000
+r11 0000000000000000 r12 0000000000000000 r13 0000000000000000 r14 0000000000000000
+r15 0000000000000000 rflags 00000212
+es: 0010 ds: 0010 cs: 0008 ss: 0010
+Kernel PANIC at ../../userprog/exception.c:97 in kill(): Kernel bug - unexpected interrupt in kernel
+Call stack: 0x8004217edb 0x800421cb62 0x8004208fe3 0x8004209401 0x800421b77a 0x8004207994.
 The `backtrace' program can make call stacks useful.
 Read "Backtraces" in the "Debugging Tools" chapter
 of the Pintos documentation for more information.
-Timer: 73 ticks
-Thread: 43 idle ticks, 30 kernel ticks, 0 user ticks
+Timer: 89 ticks
+Thread: 46 idle ticks, 39 kernel ticks, 4 user ticks
 hd0:0: 0 reads, 0 writes
-hd0:1: 90 reads, 506 writes
+hd0:1: 143 reads, 506 writes
 hd1:0: 229 reads, 0 writes
 hd1:1: 0 reads, 0 writes
-Console: 1426 characters output
+Console: 1941 characters output
 Key

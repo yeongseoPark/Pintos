@@ -142,9 +142,12 @@ page_fault (struct intr_frame *f) {
 
 #ifdef VM
 	/* For project 3 and later. */
-	if (vm_try_handle_fault (f, fault_addr, user, write, not_present))
+	if (vm_try_handle_fault (f, fault_addr, user, write, not_present)) {
+		/* 애초에 여기서 들어오는 fault_addr 자체가 이상함 !!!!!!!!!! */
 		return;
+	}
 #endif
+    exit(-1);
 
 	/* Count page faults. */
 	page_fault_cnt++;
@@ -156,8 +159,7 @@ page_fault (struct intr_frame *f) {
 			write ? "writing" : "reading",
 			user ? "user" : "kernel");
 	// ******************************LINE MODDED****************************** //
-    /*kill (f);*/
-    exit(-1);
+    kill (f);
     // *************************MODDED LINE ENDS HERE************************* //
 }
 

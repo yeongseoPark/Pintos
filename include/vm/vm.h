@@ -17,8 +17,12 @@ enum vm_type {
 	/* page that hold the page cache, for project 4 */
 	VM_PAGE_CACHE = 3,
 
-	/* Bit flags to store state */
+	// 스택인 경우 구분
+	// VM_STACK = 9, // VM_ANON || (1<<3)
+	// ANON페이지로 만들 UINIT페이지를 stack bottom에서 PGSIZE만큼(1page)만듬
+	// 이때 type에 VM_MARKER_0 플래그 추가하여서 이 페이지가 스택에 있다는 것을 표시
 
+	/* Bit flags to store state */
 	/* Auxillary bit flag marker for store information. You can add more
 	 * markers, until the value is fit in the int. */
 	VM_MARKER_0 = (1 << 3),
@@ -61,6 +65,7 @@ struct page {
 	/***** P3 추가 ******/
 	struct hash_elem hash_elem;	// key: page->va, value: struct page
 	bool writable;
+	bool stack; // 스택 표시
 
 
 	/* Per-type data are binded into the union.
@@ -106,7 +111,7 @@ struct page_operations {
  * We don't want to force you to obey any specific design for this struct.
  * All designs up to you for this. */
 struct supplemental_page_table {
-	struct hash *spt_hash; 	// hash table		
+	struct hash spt_hash; 	// 왜 포인터 안씀??????????????? 5/15		
 };
 
 #include "threads/thread.h"
@@ -132,7 +137,7 @@ bool vm_claim_page (void *va);
 enum vm_type page_get_type (struct page *page);
 
 /* 보조 함수 추가 */
-unsigned page_hash(const struct hash_elem *p_elem, void *aux UNUSED);
+uint64_t page_hash(const struct hash_elem *p_elem, void *aux UNUSED);
 bool page_less(const struct hash_elem *a , const struct hash_elem *b, void *aux);
 bool page_insert(struct hash *h, struct page *p);
 bool page_delete(struct hash* h, struct page *p);

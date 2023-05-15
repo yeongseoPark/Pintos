@@ -80,9 +80,12 @@ tid_t process_create_initd (const char *file_name) {
  */
 static void initd (void *f_name) {
 #ifdef VM
-	supplemental_page_table_init (&thread_current ()->spt);
-#endif
+	struct thread *curr = thread_current ();
+	// ASSERT(curr->spt != NULL);
+	// ASSERT(curr->spt->spt_hash == NULL);
 
+	supplemental_page_table_init (&curr->spt);
+#endif
 	process_init (); // 제대로된 스레드인지를 확인하는 것 만으로도 제대로 된 프로세스인지를 알 수 있음
 
 	if (process_exec (f_name) < 0)
@@ -331,6 +334,7 @@ int process_exec (void *f_name) {
 	 */
 
 	/* VM : initialize the set of vm_entries */
+	// supplemental_page_table_init(&thread_current()->spt);
 
 	success = load (file_name, &_if); 
     /*memset(&_if, 0, sizeof _if);
@@ -444,7 +448,9 @@ static void process_cleanup (void) {
 	struct thread *curr = thread_current ();
 
 #ifdef VM
-	supplemental_page_table_kill (&curr->spt); // 카이스트 강의에서 vm_entries라고 부르는 이 친구 를 삭제
+	// supplemental_page_table_kill (&curr->spt); // 이러면 메모리 load할때마다 spt에 있는 데이터 모두 삭제함
+	if(!hash_empty(&curr->spt.spt_hash))
+		supplemental_page_table_kill (&curr->spt);
 #endif
 
 	uint64_t *pml4;
@@ -885,12 +891,13 @@ static bool lazy_load_segment (struct page *page, void *aux) {
 
 		return false;
 	}
+	else {
+        // 파일을 읽어온 경우
+        // 파일 쓰기 - 4kb중 파일을 쓰고 남는 부분은 0으로 채움
+        memset (page->frame->kva + read_bytes, 0, zero_bytes);
 
-	// 파일을 성공적으로 읽어왔음
-	// 4kb중에서 파일을 쓰고 남는 부분은 0으로 채운다
-	memset(page->frame->kva + read_bytes, 0, zero_bytes);
-
-	return true;
+        return true;
+	}
 }
 
 /* Loads a segment starting at offset OFS in FILE at address
@@ -913,8 +920,6 @@ static bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
 	ASSERT (pg_ofs (upage) == 0);
 	ASSERT (ofs % PGSIZE == 0);
 
-	off_t read_ofs = ofs;
-
 	while (read_bytes > 0 || zero_bytes > 0) {
 		/* Do calculate how to fill this page.
 		 * We will read PAGE_READ_BYTES bytes from FILE
@@ -925,24 +930,25 @@ static bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
 		/* create vm_entry(use malloc)*
 		/* setting vm_entry members, offset and size of file to read when virtual page is required, zero byte to pad at the end */
 		/* vm_entry를 hash table에 삽입 */
-
 		// aux에 file과 offset과 , read byte, zero byte 등록
 		// vm_alloc_page_with_initializer호출하는데 , 이때 aux 사용 
 
-		struct info_aux *aux = (struct aux*)malloc(sizeof(aux));
+		struct info_aux *aux = (struct aux*)calloc(1, sizeof(struct info_aux));
 		aux->file = file;
-		aux->offset = read_ofs;
+		aux->offset = ofs;
 		aux->read_bytes = page_read_bytes;
 		aux->zero_bytes = page_zero_bytes;
 
-
-		vm_alloc_page_with_initializer(VM_ANON, upage, writable, lazy_load_segment, aux);
+		if (!vm_alloc_page_with_initializer(VM_ANON, upage, writable, lazy_load_segment, aux)) {
+			return false;
+		}
 
 		/* Advance.. */
 		read_bytes -= page_read_bytes;
 		zero_bytes -= page_zero_bytes;
-		ofs += page_read_bytes; // project3 추가
 		upage += PGSIZE;
+
+		ofs += page_read_bytes; // 다음 파일을 위해 파일을 읽은 바이트만큼 오프셋 이동
 	}
 	return true;
 }
@@ -960,14 +966,25 @@ static bool setup_stack (struct intr_frame *if_) {
 	/* TODO: Your code goes here */
 
 	// VM_MARKER_0 은 스택을 의미
-	if (vm_alloc_page_with_initializer(VM_ANON | VM_MARKER_0, stack_bottom, 1, NULL, NULL)) {
-		success = vm_claim_page(stack_bottom); // 페이지를 얻고, 물리프레임과 연결한 후 페이지테이블(pml4)에 넣음
-		if (success) {
-			if_->rsp = USER_STACK;
-			thread_current()->stack_bottom = stack_bottom; 
-		}
-	}
+	// if (vm_alloc_page_with_initializer(VM_STACK, stack_bottom, true, NULL, NULL)) {
+	if (vm_alloc_page_with_initializer(VM_ANON | VM_MARKER_0, stack_bottom, true, NULL, NULL))
+    {   
+        // va에 페이지를 할당하고, 해당 페이지에 프레임 할당하고 mmu 설정
+        if (vm_claim_page(stack_bottom))
+        {   
+            // rsp 설정
+            if_->rsp = USER_STACK;
 
-	return success;
+			/* ----------------------------------- project3-2_Stack Growth ----------------------------------- */ 
+            // 스택의 끝부분 저장
+            thread_current()->stack_bottom = stack_bottom;
+			/* ----------------------------------- project3-2_Stack Growth ----------------------------------- */ 
+
+            // success를 true로 값 변경
+            success = true;
+        }
+    }
+
+    return success;
 }
 #endif /* VM */

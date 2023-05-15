@@ -445,26 +445,17 @@ tid_t thread_create(const char *name, int priority, thread_func *function, void 
     t->tf.eflags = FLAG_IF;
     // 위의 GDT셀렉터들은 각 세그먼트에 대한 디스크립터
 
+    /* ---------------- project 3 -------------------- */
+    supplemental_page_table_init(&t->spt);
+    /* ---------------- project 3 -------------------- */
+
+
+
     /* Add to run queue. */
     thread_unblock(t);
 
     // ******************************LINE ADDED****************************** //
     // Project 1-2.1 : Thread - RoundRobin Scheduling -> Priority Scheduling
-    // compare the priorities of the currently running thread and the newly inserted one.
-    // Yield the CPU if the newly arriving thread has higher priority
-    // TODO
-    //      void thread_unblock(struct thread *t) - DONE
-    //          -> When the thread is unblocked, it is inserted to ready_list in the priority order.
-    //          -> HINT
-    //               When unblocking a thread, use "list_insert_ordered" instead of "list_push_back"
-    //               -> list_insert_ordered 함수 만들기
-    //      void thread_yield(void) - DONE
-    //          -> The current thread yields CPU and it is inserted to ready_list in priority order.
-    //      void thread_set_priority(int new_priority) - DONE
-    //          -> Set priority of the current thread.
-    //          -> Reorder the ready_list
-    // 생성된 스레드(t), 지금 돌고 있는 스레드(now_running)비교
-    // 새로 생성된 스레드가 우선순위 더 높으면 if문 TRUE -> Yield
     if (cmp_priority(&t->elem, &now_running->elem, 0)) {
             thread_yield();
     }

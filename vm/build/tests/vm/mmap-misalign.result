@@ -1,16 +1,15 @@
 FAIL
-Kernel panic in run: PANIC at ../../lib/kernel/list.c:144 in list_insert(): assertion `is_interior (before) || is_tail (before)' failed.
-Call stack: 0x8004217ec2 0x800421840b 0x80042186b3 0x8004220b4e 0x8004220d11 0x8004220c55 0x800421ca93 0x8004208fca 0x80042093e8 0x8004220ddc 0x800421b524 0x800420797b
-Translation of call stack:
-0x0000008004217ec2: debug_panic (lib/kernel/debug.c:32)
-0x000000800421840b: list_insert (lib/kernel/list.c:145)
-0x00000080042186b3: list_push_back (lib/kernel/list.c:186)
-0x0000008004220b4e: vm_get_frame (vm/vm.c:161)
-0x0000008004220d11: vm_do_claim_page (vm/vm.c:221)
-0x0000008004220c55: vm_try_handle_fault (vm/vm.c:186)
-0x000000800421ca93: page_fault (userprog/exception.c:145)
-0x0000008004208fca: intr_handler (threads/interrupt.c:352)
-0x00000080042093e8: intr_entry (threads/intr-stubs.o:?)
-0x0000008004220ddc: supplemental_page_table_init (vm/vm.c:253)
-0x000000800421b524: initd (userprog/process.c:86)
-0x000000800420797b: kernel_thread (threads/thread.c:749)
+Test output failed to match any acceptable form.
+
+Acceptable output:
+  (mmap-misalign) begin
+  (mmap-misalign) open "sample.txt"
+  (mmap-misalign) try to mmap at misaligned address
+  (mmap-misalign) end
+Differences in `diff -u' format:
+  (mmap-misalign) begin
+  (mmap-misalign) open "sample.txt"
+  (mmap-misalign) try to mmap at misaligned address
+- (mmap-misalign) end
+
+(Process exit codes are excluded for matching purposes.)

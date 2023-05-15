@@ -27,10 +27,12 @@ vm_anon_init (void) {
 /* Initialize the file mapping */
 bool
 anon_initializer (struct page *page, enum vm_type type, void *kva) {
-	/* Set up the handler */
-	page->operations = &anon_ops;
-
-	struct anon_page *anon_page = &page->anon;
+    // new anon page: uninit 필드를 0으로 초기화
+    struct uninit_page *uninit = &page->uninit;
+    memset(uninit, 0, sizeof(struct uninit_page));
+    /* Set up the handler */
+    page->operations = &anon_ops;
+    struct anon_page *anon_page = &page->anon;
 }
 
 /* Swap in the page by read contents from the swap disk. */

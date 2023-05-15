@@ -22,7 +22,8 @@ void syscall_entry (void); // syscall_entry.S를 실행하는데, 이때부터 �
 4. rsp 내용을 rdi로 옮겨준다 (movq %rsp %rdi)
 5. syscall_handler 호출 */
 void syscall_handler (struct intr_frame *);
-void check_address(void *addr);
+struct page* check_address(void *addr);
+void check_valid_buffer(void* buffer, unsigned size, void* rsp, bool to_write);
 
 // Project 2-2-1: User Programs - System Call - Basics
 void halt(void);
@@ -125,13 +126,14 @@ void syscall_handler (struct intr_frame *f UNUSED) {
             f -> R.rax = filesize(f -> R.rdi);
             break;
         case SYS_READ: // Read from a file.
+            check_valid_buffer(f->R.rsi, f->R.rdx, f->rsp, 1);
             f -> R.rax = read(f -> R.rdi, f -> R.rsi, f -> R.rdx);
             break;
         case SYS_WRITE: // Write to a file.
+            check_valid_buffer(f->R.rsi, f->R.rdx, f->rsp, 0);
             f -> R.rax = write(f -> R.rdi, f -> R.rsi, f -> R.rdx);
             break;
         case SYS_SEEK: // Change position in a file.
-            /*seek(f -> R.rdi, f -> R.rdx); <<<<<<<<<<< 이새끼가 범인이에요*/
             seek(f -> R.rdi, f -> R.rsi);
             break;
         case SYS_TELL: // Report current position in a file.
@@ -157,13 +159,29 @@ void syscall_handler (struct intr_frame *f UNUSED) {
 // ******************************LINE ADDED****************************** //
 // Project 2-2-1: User Programs - System Call - Basics
 // 주소 체크 예외 처리 함수
-void check_address(void *addr) {
+struct page* check_address(void *addr) {
     struct thread *curr = thread_current();
     // 체크 조건
     // user virtual address 인지 (is_user_vaddr) = 커널 VM이 아닌지
     // 주소가 NULL 은 아닌지
     // 유저 주소 영역내를 가르키지만 아직 할당되지 않았는지 (pml4_get_page)
-    if (!is_user_vaddr(addr) || addr == NULL || pml4_get_page(curr->pml4, addr) == NULL){
+    // if (!is_user_vaddr(addr) || addr == NULL || pml4_get_page(curr->pml4, addr) == NULL){
+    //         exit(-1);
+    // }
+    /* ---------- project 3 ---------- */
+    if (is_kernel_vaddr(addr)) {
+        exit(-1);
+    }
+
+    return spt_find_page(&thread_current()->spt, addr);
+}
+
+void check_valid_buffer(void* buffer, unsigned size, void* rsp, bool to_write) {
+    for (int i = 0; i < size; i++) {
+        struct page* page = check_address(buffer + i);    // 인자로 받은 buffer부터 buffer + size까지의 크기가 한 페이지의 크기를 넘을수도 있음
+        if(page == NULL)
+            exit(-1);
+        if(to_write == true && page->writable == false)
             exit(-1);
     }
 }
@@ -401,3 +419,4 @@ void close(int fd){
     remove_file_from_fdt(fd);
 }
 // *************************ADDED LINE ENDS HERE************************* //
+

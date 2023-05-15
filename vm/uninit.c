@@ -55,11 +55,12 @@ uninit_initialize (struct page *page, void *kva) {
 	struct uninit_page *uninit = &page->uninit; // 페이지 구조체 내부의 union 안의 uninit
 
 	/* Fetch first, page_initialize may overwrite the values */
-	vm_initializer *init = uninit->init;
+	vm_initializer *init = uninit->init; // lazy_load_segment
 	void *aux = uninit->aux;
 
 	/* TODO: You may need to fix this function. */
-	return uninit->page_initializer (page, uninit->type, kva) &&
+	/* 터짐 포인트 5/15 밤 */
+	return uninit->page_initializer (page, uninit->type, kva) && // 각 페이지type에 맞게 초기화함수 호출
 		(init ? init (page, aux) : true);
 }
 
