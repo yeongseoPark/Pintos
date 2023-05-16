@@ -19,24 +19,22 @@ Executing 'rox-child':
 (rox-child) read "child-rox"
 (rox-child) write "child-rox"
 (rox-child) exec "child-rox 1"
-Interrupt 0x0d (#GP General Protection Exception) at rip=800422155f
- cr2=000000000040225a error=               0
-rax 48c87d894840ec6b rbx 0000000000000000 rcx 0000000000000080 rdx 48c87d894840ec83
-rsp 0000008004258e70 rbp 0000008004258eb0 rsi 0000008004245228 rdi 0000008004258e88
-rip 000000800422155f r8 0000000000000000  r9 0000000000000000 r10 0000000000000000
-r11 0000000000000000 r12 0000000000000000 r13 0000000000000000 r14 0000000000000000
-r15 0000000000000000 rflags 00000212
-es: 0010 ds: 0010 cs: 0008 ss: 0010
-Kernel PANIC at ../../userprog/exception.c:97 in kill(): Kernel bug - unexpected interrupt in kernel
-Call stack: 0x8004217edb 0x800421cb62 0x8004208fe3 0x8004209401 0x800421b77a 0x8004207994.
-The `backtrace' program can make call stacks useful.
-Read "Backtraces" in the "Debugging Tools" chapter
-of the Pintos documentation for more information.
-Timer: 81 ticks
-Thread: 46 idle ticks, 31 kernel ticks, 4 user ticks
+(child-rox) begin
+(child-rox) try to write "child-rox"
+(child-rox) try to write "child-rox"
+(child-rox) end
+child-rox: exit(12)
+(rox-child) write "child-rox"
+(rox-child) end
+rox-child: exit(0)
+Execution of 'rox-child' complete.
+Timer: 79 ticks
+Thread: 51 idle ticks, 25 kernel ticks, 3 user ticks
 hd0:0: 0 reads, 0 writes
-hd0:1: 114 reads, 479 writes
+hd0:1: 176 reads, 480 writes
 hd1:0: 220 reads, 0 writes
 hd1:1: 0 reads, 0 writes
-Console: 1923 characters output
-Key
+Console: 1284 characters output
+Keyboard: 0 keys pressed
+Exception: 0 page faults
+Powering off...

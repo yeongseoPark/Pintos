@@ -18,13 +18,13 @@ Executing 'swap-iter':
 (swap-iter) write sparsely over page 0
 (swap-iter) write sparsely over page 512
 (swap-iter) write sparsely over page 1024
-Kernel PANIC at ../../vm/vm.c:219 in vm_get_frame(): todo
-Call stack: 0x8004217edb 0x8004221106 0x80042213d9 0x8004221256 0x800421cc59 0x8004208fe3 0x8004209401 0x400e2e 0x400e77.
+Kernel PANIC at ../../vm/vm.c:227 in vm_get_frame(): todo
+Call stack: 0x8004217ec2 0x8004220eeb 0x80042210b0 0x8004220fd9 0x800421cc68 0x8004208fca 0x80042093e8 0x400e2e 0x400e77.
 The `backtrace' program can make call stacks useful.
 Read "Backtraces" in the "Debugging Tools" chapter
 of the Pintos documentation for more information.
-Timer: 524 ticks
-Thread: 357 idle ticks, 133 kernel ticks, 34 user ticks
+Timer: 682 ticks
+Thread: 501 idle ticks, 157 kernel ticks, 24 user ticks
 hd0:0: 0 reads, 0 writes
 hd0:1: 116 reads, 15902 writes
 hd1:0: 7932 reads, 0 writes

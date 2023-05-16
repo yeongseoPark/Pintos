@@ -126,11 +126,11 @@ void syscall_handler (struct intr_frame *f UNUSED) {
             f -> R.rax = filesize(f -> R.rdi);
             break;
         case SYS_READ: // Read from a file.
-            check_valid_buffer(f->R.rsi, f->R.rdx, f->rsp, 1);
+            // check_valid_buffer(f->R.rsi, f->R.rdx, f->rsp, 1);
             f -> R.rax = read(f -> R.rdi, f -> R.rsi, f -> R.rdx);
             break;
         case SYS_WRITE: // Write to a file.
-            check_valid_buffer(f->R.rsi, f->R.rdx, f->rsp, 0);
+            // check_valid_buffer(f->R.rsi, f->R.rdx, f->rsp, 0);
             f -> R.rax = write(f -> R.rdi, f -> R.rsi, f -> R.rdx);
             break;
         case SYS_SEEK: // Change position in a file.
@@ -165,17 +165,21 @@ struct page* check_address(void *addr) {
     // user virtual address 인지 (is_user_vaddr) = 커널 VM이 아닌지
     // 주소가 NULL 은 아닌지
     // 유저 주소 영역내를 가르키지만 아직 할당되지 않았는지 (pml4_get_page)
-    // if (!is_user_vaddr(addr) || addr == NULL || pml4_get_page(curr->pml4, addr) == NULL){
-    //         exit(-1);
-    // }
-    /* ---------- project 3 ---------- */
-    if (is_kernel_vaddr(addr)) {
-        exit(-1);
-    }
+    if(!is_user_vaddr(addr) || addr == NULL){
+		exit(-1);
+	}
 
-    return spt_find_page(&thread_current()->spt, addr);
+	#ifdef VM
+	// pml4_get_page()를 호출하여 주소에 pml4로 매핑되어 있는 페이지가 있는지 확인
+	if(pml4_get_page (&thread_current()->pml4, addr) == NULL)
+		// 매핑되어 있는 페이지가 없다면 대기중인 보조 페이지 테이블이 있는지 확인
+		if (spt_find_page(&thread_current()->spt, addr) == NULL)
+			// 보조 페이지 테이블이 없다면 -1로 종료
+			exit(-1);
+	#endif
 }
 
+/* 안씀 */
 void check_valid_buffer(void* buffer, unsigned size, void* rsp, bool to_write) {
     for (int i = 0; i < size; i++) {
         struct page* page = check_address(buffer + i);    // 인자로 받은 buffer부터 buffer + size까지의 크기가 한 페이지의 크기를 넘을수도 있음
@@ -230,7 +234,7 @@ bool remove (const char *file) {
 
 // SYS_FORK : Clone current process. (자식 프로세스 생성)
 tid_t fork (const char *thread_name, struct intr_frame *f) {
-    // check_address(thread_name);
+    check_address(thread_name);
     return process_fork(thread_name, f);
 }
 
@@ -340,7 +344,7 @@ int filesize(int fd){
 - 파일 디스크립터가 0이 아닐 경우 파일의 데이터를 크기만큼 저장 후 읽은 바이트 수를 리턴*/
 int read(int fd, void *buffer, unsigned size){
     check_address(buffer);
-    check_address(buffer+size-1);
+    // check_address(buffer+size-1);
     int read_count; // 글자수 카운트 용(for문 사용하기 위해)
 
     struct file *file_obj = find_file_by_fd(fd);

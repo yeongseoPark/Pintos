@@ -18,7 +18,7 @@ enum vm_type {
 	VM_PAGE_CACHE = 3,
 
 	// 스택인 경우 구분
-	// VM_STACK = 9, // VM_ANON || (1<<3)
+	VM_STACK = 9, 
 	// ANON페이지로 만들 UINIT페이지를 stack bottom에서 PGSIZE만큼(1page)만듬
 	// 이때 type에 VM_MARKER_0 플래그 추가하여서 이 페이지가 스택에 있다는 것을 표시
 
@@ -66,7 +66,6 @@ struct page {
 	struct hash_elem hash_elem;	// key: page->va, value: struct page
 	bool writable;
 	bool stack; // 스택 표시
-
 
 	/* Per-type data are binded into the union.
 	 * Each function automatically detects the current union */

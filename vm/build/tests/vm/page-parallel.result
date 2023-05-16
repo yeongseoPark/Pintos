@@ -1,10 +1,25 @@
 FAIL
-Kernel panic in run: PANIC at ../../userprog/exception.c:97 in kill(): Kernel bug - unexpected interrupt in kernel
-Call stack: 0x8004217edb 0x800421cb62 0x8004208fe3 0x8004209401 0x800421b77a 0x8004207994
+Kernel panic in run: PANIC at ../../threads/thread.c:598 in thread_current(): assertion `is_thread (t)' failed.
+Call stack: 0x8004217ec2 0x8004207635 0x800420a771 0x800421b1c7 0x800421b394 0x800421b378 0x80042162ba 0x8004215710 0x800421b227 0x80042153c5 0x800421d1fd 0x800421cc7d 0x8004208fca 0x80042093e8 0x800421ef3b 0x800421c3cd 0x800421c17b 0x800421b9fe 0x800421d380 0x800421ce76 0x800421ccf2
 Translation of call stack:
-0x0000008004217edb: debug_panic (lib/kernel/debug.c:32)
-0x000000800421cb62: kill (userprog/exception.c:103)
-0x0000008004208fe3: intr_handler (threads/interrupt.c:352)
-0x0000008004209401: intr_entry (threads/intr-stubs.o:?)
-0x000000800421b77a: __do_fork (userprog/process.c:235)
-0x0000008004207994: kernel_thread (threads/thread.c:740)
+0x0000008004217ec2: debug_panic (lib/kernel/debug.c:32)
+0x0000008004207635: thread_current (threads/thread.c:599)
+0x000000800420a771: lock_held_by_current_thread (threads/synch.c:286)
+0x000000800421b1c7: console_locked_by_current_thread (lib/kernel/console.c:111 (discriminator 2))
+0x000000800421b394: putchar_have_lock (lib/kernel/console.c:173)
+0x000000800421b378: vprintf_helper (lib/kernel/console.c:166)
+0x00000080042162ba: format_integer (lib/stdio.c:506)
+0x0000008004215710: __vprintf (lib/stdio.c:206)
+0x000000800421b227: vprintf (lib/kernel/console.c:123)
+0x00000080042153c5: printf (lib/stdio.c:80)
+0x000000800421d1fd: exit (userprog/syscall.c:207)
+0x000000800421cc7d: page_fault (userprog/exception.c:147)
+0x0000008004208fca: intr_handler (threads/interrupt.c:352)
+0x00000080042093e8: intr_entry (threads/intr-stubs.o:?)
+0x000000800421ef3b: file_length (filesys/file.c:140)
+0x000000800421c3cd: validate_segment (userprog/process.c:739)
+0x000000800421c17b: load (userprog/process.c:663)
+0x000000800421b9fe: process_exec (userprog/process.c:345)
+0x000000800421d380: exec (userprog/syscall.c:256)
+0x000000800421ce76: syscall_handler (userprog/syscall.c:109)
+0x000000800421ccf2: no_sti (userprog/syscall-entry.o:?)

@@ -446,7 +446,7 @@ tid_t thread_create(const char *name, int priority, thread_func *function, void 
     // 위의 GDT셀렉터들은 각 세그먼트에 대한 디스크립터
 
     /* ---------------- project 3 -------------------- */
-    supplemental_page_table_init(&t->spt);
+    // supplemental_page_table_init(&t->spt);
     /* ---------------- project 3 -------------------- */
 
 

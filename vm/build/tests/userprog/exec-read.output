@@ -4,7 +4,7 @@ Kernel command line: -q -f put exec-read put sample.txt put child-read run exec-
 Pintos booting with: 
 	base_mem: 0x0 ~ 0x9fc00 (Usable: 639 kB)
 	ext_mem: 0x100000 ~ 0x13e0000 (Usable: 19,328 kB)
-Calibrating timer...  209,715,200 loops/s.
+Calibrating timer...  232,243,200 loops/s.
 hd0:0: detected 329 sector (164 kB) disk, model "QEMU HARDDISK", serial "QM00001"
 hd0:1: detected 20,160 sector (9 MB) disk, model "QEMU HARDDISK", serial "QM00002"
 hd1:0: detected 229 sector (114 kB) disk, model "QEMU HARDDISK", serial "QM00003"
@@ -18,24 +18,16 @@ Executing 'exec-read':
 (exec-read) begin
 (exec-read) open "sample.txt"
 (exec-read) read "sample.txt" first 20 bytes
-Interrupt 0x0d (#GP General Protection Exception) at rip=800422155f
- cr2=0000000000605f45 error=               0
-rax 48c87d894840ec6b rbx 0000000000000000 rcx 0000000000000080 rdx 48c87d894840ec83
-rsp 0000008004256e70 rbp 0000008004256eb0 rsi 0000008004245228 rdi 0000008004256e88
-rip 000000800422155f r8 0000000000000000  r9 0000000000000000 r10 0000000000000000
-r11 0000000000000000 r12 0000000000000000 r13 0000000000000000 r14 0000000000000000
-r15 0000000000000000 rflags 00000212
-es: 0010 ds: 0010 cs: 0008 ss: 0010
-Kernel PANIC at ../../userprog/exception.c:97 in kill(): Kernel bug - unexpected interrupt in kernel
-Call stack: 0x8004217edb 0x800421cb62 0x8004208fe3 0x8004209401 0x800421b77a 0x8004207994.
+Kernel PANIC at ../../filesys/inode.c:304 in inode_allow_write(): assertion `inode->deny_write_cnt > 0' failed.
+Call stack: 0x8004217ec2 0x8004220079 0x800421eed0 0x800421ec7d 0x80042216e3 0x800422141a 0x800421a490 0x8004221459 0x800421bc2c 0x800421b9e1 0x800421d380 0x800421ce76 0x800421ccf2 0x400342 0x40046e 0x400f0f.
 The `backtrace' program can make call stacks useful.
 Read "Backtraces" in the "Debugging Tools" chapter
 of the Pintos documentation for more information.
-Timer: 89 ticks
-Thread: 46 idle ticks, 39 kernel ticks, 4 user ticks
+Timer: 78 ticks
+Thread: 41 idle ticks, 36 kernel ticks, 1 user ticks
 hd0:0: 0 reads, 0 writes
 hd0:1: 143 reads, 506 writes
 hd1:0: 229 reads, 0 writes
 hd1:1: 0 reads, 0 writes
-Console: 1941 characters output
+Console: 1549 characters output
 Key

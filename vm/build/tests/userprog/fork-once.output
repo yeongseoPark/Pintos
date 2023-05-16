@@ -14,24 +14,19 @@ Boot complete.
 Putting 'fork-once' into the file system...
 Executing 'fork-once':
 (fork-once) begin
-Interrupt 0x0d (#GP General Protection Exception) at rip=800422155f
- cr2=0000000000403786 error=               0
-rax 48c87d894840ec6b rbx 0000000000000000 rcx 0000000000000080 rdx 48c87d894840ec83
-rsp 0000008004252e70 rbp 0000008004252eb0 rsi 0000008004245228 rdi 0000008004252e88
-rip 000000800422155f r8 0000000000000000  r9 0000000000000000 r10 0000000000000000
-r11 0000000000000000 r12 0000000000000000 r13 0000000000000000 r14 0000000000000000
-r15 0000000000000000 rflags 00000212
-es: 0010 ds: 0010 cs: 0008 ss: 0010
-Kernel PANIC at ../../userprog/exception.c:97 in kill(): Kernel bug - unexpected interrupt in kernel
-Call stack: 0x8004217edb 0x800421cb62 0x8004208fe3 0x8004209401 0x800421b77a 0x8004207994.
-The `backtrace' program can make call stacks useful.
-Read "Backtraces" in the "Debugging Tools" chapter
-of the Pintos documentation for more information.
-Timer: 75 ticks
-Thread: 43 idle ticks, 28 kernel ticks, 4 user ticks
+(fork-once) child run
+child: exit(81)
+(fork-once) Parent: child exit status is 81
+(fork-once) end
+fork-once: exit(0)
+Execution of 'fork-once' complete.
+Timer: 66 ticks
+Thread: 39 idle ticks, 24 kernel ticks, 3 user ticks
 hd0:0: 0 reads, 0 writes
 hd0:1: 80 reads, 234 writes
 hd1:0: 103 reads, 0 writes
 hd1:1: 0 reads, 0 writes
-Console: 1744 characters output
-Key
+Console: 1029 characters output
+Keyboard: 0 keys pressed
+Exception: 0 page faults
+Powering off...

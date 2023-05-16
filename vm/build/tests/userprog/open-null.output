@@ -4,7 +4,7 @@ Kernel command line: -q -f put open-null run open-null
 Pintos booting with: 
 	base_mem: 0x0 ~ 0x9fc00 (Usable: 639 kB)
 	ext_mem: 0x100000 ~ 0x13e0000 (Usable: 19,328 kB)
-Calibrating timer...  208,691,200 loops/s.
+Calibrating timer...  209,510,400 loops/s.
 hd0:0: detected 329 sector (164 kB) disk, model "QEMU HARDDISK", serial "QM00001"
 hd0:1: detected 20,160 sector (9 MB) disk, model "QEMU HARDDISK", serial "QM00002"
 hd1:0: detected 102 sector (51 kB) disk, model "QEMU HARDDISK", serial "QM00003"
@@ -14,16 +14,15 @@ Boot complete.
 Putting 'open-null' into the file system...
 Executing 'open-null':
 (open-null) begin
-Kernel PANIC at ../../filesys/directory.c:110 in dir_lookup(): assertion `name != NULL' failed.
-Call stack: 0x8004217edb 0x800421f3a4 0x800421dd3a 0x800421d55f 0x800421cf18 0x800421cce3 0x4000fd 0x40015b 0x400bfc.
-The `backtrace' program can make call stacks useful.
-Read "Backtraces" in the "Debugging Tools" chapter
-of the Pintos documentation for more information.
-Timer: 68 ticks
-Thread: 39 idle ticks, 26 kernel ticks, 3 user ticks
+open-null: exit(-1)
+Execution of 'open-null' complete.
+Timer: 65 ticks
+Thread: 39 idle ticks, 24 kernel ticks, 2 user ticks
 hd0:0: 0 reads, 0 writes
-hd0:1: 81 reads, 232 writes
+hd0:1: 80 reads, 232 writes
 hd1:0: 102 reads, 0 writes
 hd1:1: 0 reads, 0 writes
-Console: 1245 characters output
-Key
+Console: 932 characters output
+Keyboard: 0 keys pressed
+Exception: 0 page faults
+Powering off...

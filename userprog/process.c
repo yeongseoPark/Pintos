@@ -230,6 +230,12 @@ static void __do_fork (void *aux) {
 		goto error;
 
 	process_activate (current);
+
+/* fork 디버깅용 : page->uninit->type 이 UNINIT */
+	struct hash_iterator iter;
+	hash_first(&iter, &parent->spt.spt_hash);
+	struct page* page = hash_entry(hash_cur(&iter), struct page, hash_elem);
+
 #ifdef VM
 	supplemental_page_table_init (&current->spt);
 	if (!supplemental_page_table_copy (&current->spt, &parent->spt))
@@ -966,8 +972,7 @@ static bool setup_stack (struct intr_frame *if_) {
 	/* TODO: Your code goes here */
 
 	// VM_MARKER_0 은 스택을 의미
-	// if (vm_alloc_page_with_initializer(VM_STACK, stack_bottom, true, NULL, NULL)) {
-	if (vm_alloc_page_with_initializer(VM_ANON | VM_MARKER_0, stack_bottom, true, NULL, NULL))
+	if (vm_alloc_page_with_initializer(VM_STACK, stack_bottom, true, NULL, NULL))
     {   
         // va에 페이지를 할당하고, 해당 페이지에 프레임 할당하고 mmu 설정
         if (vm_claim_page(stack_bottom))
@@ -977,7 +982,7 @@ static bool setup_stack (struct intr_frame *if_) {
 
 			/* ----------------------------------- project3-2_Stack Growth ----------------------------------- */ 
             // 스택의 끝부분 저장
-            thread_current()->stack_bottom = stack_bottom;
+            // thread_current()->stack_bottom = stack_bottom;
 			/* ----------------------------------- project3-2_Stack Growth ----------------------------------- */ 
 
             // success를 true로 값 변경
