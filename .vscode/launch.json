@@ -4,7 +4,7 @@
         "type": "gdb",
         "request": "attach",
         "name": "Attach to gdbserver : threads",
-        "executable": "${workspaceRoot}/threads/build/kernel.o",
+        "executable": "${workspaceRoot}/vm/build/kernel.o",
         "target": "localhost:1234",
         "remote": true,
         "cwd": "${workspaceRoot}",

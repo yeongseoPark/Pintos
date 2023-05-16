@@ -1,6 +1,20 @@
 {
     "files.associations": {
-        "inspect.h": "c",
-        "vm.h": "c"
+        "memory_resource": "c",
+        "atomic": "c",
+        "*.tcc": "c",
+        "string": "c",
+        "optional": "c",
+        "string_view": "c",
+        "fstream": "c",
+        "istream": "c",
+        "ostream": "c",
+        "streambuf": "c",
+        "tuple": "c",
+        "array": "c",
+        "deque": "c",
+        "vector": "c",
+        "unordered_map": "c",
+        "sstream": "c"
     }
 }

@@ -445,6 +445,12 @@ tid_t thread_create(const char *name, int priority, thread_func *function, void 
     t->tf.eflags = FLAG_IF;
     // 위의 GDT셀렉터들은 각 세그먼트에 대한 디스크립터
 
+    // ************************* Project 3 ADDED ************************* //
+    supplemental_page_talbe_init(&t->spt);
+
+    // ************************* Project 3 END ************************* //
+
+
     /* Add to run queue. */
     thread_unblock(t);
 

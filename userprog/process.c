@@ -43,6 +43,14 @@ static void process_init (void) {
 	struct thread *current = thread_current (); // 1프로세스 = 1스레드 이니까 Assert(is thread)만으로도 프로세스가 온전한지 확인할 수 있다
 }
 
+// ******************************LINE ADDED****************************** //
+struct container {
+    struct file *file;
+    off_t offset;
+    size_t page_read_bytes;
+};
+// *************************ADDED LINE ENDS HERE************************* //
+
 /* Starts the first userland program, called "initd", loaded from FILE_NAME.
  * The new thread may be scheduled (and may even exit)
  * before process_create_initd() returns. Returns the initd's
@@ -790,7 +798,7 @@ static bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
 		 * We will read PAGE_READ_BYTES bytes from FILE
 		 * and zero the final PAGE_ZERO_BYTES bytes. */
 		size_t page_read_bytes = read_bytes < PGSIZE ? read_bytes : PGSIZE;
-		size_t page_zero_bytes = PGSIZE - page_read_bytes;
+		size_t page_zero_bytes = PGSIZE - page_read_bytes;  // These calculations ensure that the page is completely filled either with data read from the file or with zeros if there is not enough data in the file to fill the entire page
 
 		/* Get a page of memory. */
 		uint8_t *kpage = palloc_get_page (PAL_USER);
@@ -861,6 +869,22 @@ static bool lazy_load_segment (struct page *page, void *aux) {
 	/* TODO: Load the segment from the file */
 	/* TODO: This called when the first page fault occurs on address VA. */
 	/* TODO: VA is available when calling this function. */
+	
+	struct file *file = ((struct container *)aux)->file;
+	off_t offset = ((struct container *)aux)->offset;
+	size_t page_read_bytes = ((struct container *)aux)->page_read_bytes;
+	size_t page_zero_bytes = PGSIZE - page_read_bytes;
+
+	file_seek(file, offset);
+
+	if (file_read(file, page->frame->kva, page_read_bytes) != (int)page_read_bytes) {
+		palloc_free_page(page->frame->kva);		// palloc_get_page()는 언제 불렸나?
+		return false;
+	}
+	// 남은 바이트는 0으로 세팅
+	memset(page->frame->kva + page_read_bytes, 0, page_zero_bytes);
+
+	return true;
 }
 
 /* Loads a segment starting at offset OFS in FILE at address
@@ -891,15 +915,22 @@ static bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
 		size_t page_zero_bytes = PGSIZE - page_read_bytes;
 
 		/* TODO: Set up aux to pass information to the lazy_load_segment. */
-		void *aux = NULL;
+		struct container *container = (struct container *)malloc(sizeof(struct container));
+		container->file = file;
+		container->offset = ofs;
+		container->page_read_bytes = page_read_bytes;
+		
+		// void *aux = NULL;
 		if (!vm_alloc_page_with_initializer (VM_ANON, upage,
-					writable, lazy_load_segment, aux))
+					writable, lazy_load_segment, container))
 			return false;
 
 		/* Advance. */
 		read_bytes -= page_read_bytes;
 		zero_bytes -= page_zero_bytes;
 		upage += PGSIZE;
+
+		ofs += page_read_bytes; 	// to be sure Next call reads the correct bytes from the file
 	}
 	return true;
 }
@@ -914,6 +945,21 @@ static bool setup_stack (struct intr_frame *if_) {
 	 * TODO: You should mark the page is stack. */
 	/* TODO: Your code goes here */
 
+	if (vm_alloc_page(VM_ANON | VM_MARKER_0, stack_bottom, 1)) {
+		success = vm_claim_page(stack_bottom);	// mapping (install_page)
+	
+		if (success) {
+			if_->rsp = USER_STACK;
+			thread_current()->stack_bottom = stack_bottom;	// mark the page is stack?
+		}
+	}
 	return success;
 }
+
+// VVM_MARKER_0 could be used to indicate that a page is part of the stack, 
+// VM_MARKER_1 could be used to indicate that a page is part of the heap.
+// #define vm_alloc_page(type, upage, writable) \
+// vm_alloc_page_with_initializer ((type), (upage), (writable), NULL, NULL)
+
+
 #endif /* VM */

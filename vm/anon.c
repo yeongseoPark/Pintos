@@ -9,6 +9,11 @@ static bool anon_swap_in (struct page *page, void *kva);
 static bool anon_swap_out (struct page *page);
 static void anon_destroy (struct page *page);
 
+/* P3 추가 */
+const int SECTORS_IN_PAGE = 8; // 4kB / 512 (DISK_SECTOR_SIZE)
+struct bitmap *swap_table;	   // 0 - empty, 1 - filled
+int bitcnt;
+
 /* DO NOT MODIFY this struct */
 static const struct page_operations anon_ops = {
 	.swap_in = anon_swap_in,
@@ -21,12 +26,20 @@ static const struct page_operations anon_ops = {
 void
 vm_anon_init (void) {
 	/* TODO: Set up the swap_disk. */
-	swap_disk = NULL;
+	swap_disk = disk_get(1, 1);		// swap_disk 셋업
+
+	bitcnt = disk_size(swap_disk)/SECTORS_IN_PAGE; // one bit for each swap slot in the disk
+	swap_table = bitmap_create(bitcnt);
 }
 
-/* Initialize the file mapping */
+/* Initialize the file mapping
+- VM_ANON을 초기화하는 함수 */
 bool
 anon_initializer (struct page *page, enum vm_type type, void *kva) {
+	// new anon page: uninit 필드를 0으로 초기화
+	struct uninit_page *uninit = &page->uninit;
+	memset(uninit, 0, sizeof(struct uninit_page));
+
 	/* Set up the handler */
 	page->operations = &anon_ops;
 

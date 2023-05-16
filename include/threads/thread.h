@@ -155,6 +155,9 @@ struct thread {
 	/* Owned by thread.c. */
 	struct intr_frame tf;               /* Information for switching */
 	unsigned magic;                     /* Detects stack overflow. */
+
+// ************************* LINE ADDED ************************* //
+   void *stack_bottom;
 };
 
 /* If false (default), use round-robin scheduler.

@@ -166,6 +166,12 @@ void check_address(void *addr) {
     if (!is_user_vaddr(addr) || addr == NULL || pml4_get_page(curr->pml4, addr) == NULL){
             exit(-1);
     }
+    #ifdef VM
+    if (pml4_get_page (&thread_current()->pml4, addr) == NULL) {    // pml4로 매핑되어 있는 페이지가 있는지 확인
+        if (spt_find_page(&thread_current()->spt, addr) == NULL)    // 매핑되어 있는 페이지가 없다면 대기중인 보조 페이지 테이블이 있는지 확인
+            exit(-1);                  // 보조 페이지 테이블이 없다면 -1로 종료
+    }
+    #endif
 }
 
 // Project 2-2-1: User Programs - System Call - Basics

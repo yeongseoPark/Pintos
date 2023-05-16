@@ -31,6 +31,8 @@ vm_init (void) {
 	register_inspect_intr ();
 	/* DO NOT MODIFY UPPER LINES. */
 	/* TODO: Your code goes here. */
+	list_init(&frame_table);		// frame table 리스트로 묶어서 관리
+	start = list_begin(&frame_table);
 }
 
 /* Get the type of the page. This function is useful if you want to know the
@@ -64,21 +66,25 @@ vm_alloc_page_with_initializer (enum vm_type type, void *upage, bool writable,
 	struct supplemental_page_table *spt = &thread_current ()->spt;
 
 	/* Check wheter the upage is already occupied or not. */
-	if (spt_find_page (spt, upage) == NULL) {
+	if (spt_find_page (spt, upage) == NULL) { //
 		/* TODO: Create the page, fetch the initialier according to the VM type,
 		 * TODO: and then create "uninit" page struct by calling uninit_new. You
 		 * TODO: should modify the field after calling the uninit_new. */
 
-		/* TODO: Insert the page into the spt. */
-	
 		/********************  P3 추가 ***********************/
-		struct page *page = (struct page *)calloc(1, sizeof(struct page));
+		struct page *page = (struct page *)malloc(sizeof(struct page));
 
+		if (type == VM_ANON){
+			uninit_new (page, upage, init, type, aux, anon_initializer);
+		}
+		else if (type == VM_FILE){
+			uninit_new (page, upage, init, type, aux, file_backed_initializer);
+		}
 
+		page->writable = writable;
 
-
-	
-	
+		/* TODO: Insert the page into the spt. */
+		return spt_insert_page(spt, page);	
 	}
 err:
 	return false;
@@ -212,11 +218,33 @@ vm_try_handle_fault (struct intr_frame *f UNUSED, void *addr UNUSED,
 		bool user UNUSED, bool write UNUSED, bool not_present UNUSED) {
 	struct supplemental_page_table *spt UNUSED = &thread_current ()->spt;
 	struct page *page = NULL;
-	/* TODO: Validate the fault */
-	/* TODO: Your code goes here */
 
-	return vm_do_claim_page (page);
+	/* TODO: Validate the fault */
+	if (is_kernel_vaddr(addr) || addr == NULL)
+		return false;
+
+	/* TODO: Your code goes here */
+		// 스택 증가로 page fault 해결 가능한지
+		if (f->rsp - 8 <= addr && addr <= USER_STACK && USER_STACK - 0x100000 <= addr) {
+			vm_stack_growth(thread_current()->stack_bottom - PGSIZE);
+			return true;
+	}
+
+	// 현재 페이지가 없는 경우
+	if (not_present) {
+		// spt에서 주소에 맞는 페이지 가져오기
+		page = spt_find_page(spt, addr);
+
+		if (page == NULL)
+			return false;
+
+		if (vm_do_claim_page(page) == false)   // spt에서 찾은 page로 물리페이지 요청
+			return false; 
+	}
+
+	return true;
 }
+
 
 /* Free the page.
  * DO NOT MODIFY THIS FUNCTION. */
@@ -271,14 +299,74 @@ supplemental_page_table_init (struct supplemental_page_table *spt UNUSED) {
 bool
 supplemental_page_table_copy (struct supplemental_page_table *dst UNUSED,
 		struct supplemental_page_table *src UNUSED) {
+
+
 }
+
+
+void
+hash_action_destroy (struct hash_elem *e, void *aux UNUSED) {
+	// 삭제할 페이지 가져오기
+	struct page *page = hash_entry (e, struct page, hash_elem);
+	// error - 가져온 페이지가 NULL
+	ASSERT (page != NULL);
+	// destroy로 해당 페이지 제거
+	
+	destroy (page);
+	// 사용한 페이지 메모리 반환
+	free (page);
+}
+
+// #define destroy(page) \
+// 	if ((page)->operations->destroy) (page)->operations->destroy (page)
 
 /* Free the resource hold by the supplemental page table */
 void
 supplemental_page_table_kill (struct supplemental_page_table *spt UNUSED) {
 	/* TODO: Destroy all the supplemental_page_table hold by thread and
 	 * TODO: writeback all the modified contents to the storage. */
+	struct hash_iterator iter;
+	
+	hash_first(&iter, &spt->spt_hash);
+	while (hash_next(&iter)) {
+		struct page *page = hash_entry(hash_cur(&iter), struct page, hash_elem);
+		if (page->operations->type == VM_FILE) {
+			do_munmap(page->va);
+		}
+	}
+
+	hash_destroy(&spt->spt_hash, hash_action_destroy);
+
+	free(spt->spt_hash.aux);
 }
+
+
+/* Initializes I for iterating hash table H.
+
+   Iteration idiom:
+
+   struct hash_iterator i;
+
+   hash_first (&i, h);
+   while (hash_next (&i))
+   {
+   struct foo *f = hash_entry (hash_cur (&i), struct foo, elem);
+   ...do something with f...
+   }
+
+   Modifying hash table H during iteration, using any of the
+   functions hash_clear(), hash_destroy(), hash_insert(),
+   hash_replace(), or hash_delete(), invalidates all
+   iterators. */
+
+// /* A hash table iterator. */
+// struct hash_iterator {
+// 	struct hash *hash;          /* The hash table. */
+// 	struct list *bucket;        /* Current bucket. */
+// 	struct hash_elem *elem;     /* Current hash element in current bucket. */
+// };
+
+
 
 
 /*************************** P3 추가 **************************/
