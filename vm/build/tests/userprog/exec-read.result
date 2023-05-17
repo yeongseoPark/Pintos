@@ -1,20 +1,20 @@
 FAIL
 Kernel panic in run: PANIC at ../../filesys/inode.c:304 in inode_allow_write(): assertion `inode->deny_write_cnt > 0' failed.
-Call stack: 0x8004217ec2 0x8004220079 0x800421eed0 0x800421ec7d 0x80042216e3 0x800422141a 0x800421a490 0x8004221459 0x800421bc2c 0x800421b9e1 0x800421d380 0x800421ce76 0x800421ccf2 0x400342 0x40046e 0x400f0f
+Call stack: 0x8004217ec2 0x8004220093 0x800421eeea 0x800421ec97 0x80042217f7 0x800422152e 0x800421a490 0x800422156d 0x800421bc2c 0x800421b9e1 0x800421d39a 0x800421ce90 0x800421cd0c 0x400342 0x40046e 0x400f0f
 Translation of call stack:
 0x0000008004217ec2: debug_panic (lib/kernel/debug.c:32)
-0x0000008004220079: inode_allow_write (filesys/inode.c:305)
-0x000000800421eed0: file_allow_write (filesys/file.c:134)
-0x000000800421ec7d: file_close (filesys/file.c:52)
-0x00000080042216e3: uninit_destroy (vm/uninit.c:78)
-0x000000800422141a: destroy_fun (vm/vm.c:421)
+0x0000008004220093: inode_allow_write (filesys/inode.c:305)
+0x000000800421eeea: file_allow_write (filesys/file.c:134)
+0x000000800421ec97: file_close (filesys/file.c:52)
+0x00000080042217f7: uninit_destroy (vm/uninit.c:78)
+0x000000800422152e: destroy_fun (vm/vm.c:433)
 0x000000800421a490: hash_clear (lib/kernel/hash.c:63)
-0x0000008004221459: supplemental_page_table_kill (vm/vm.c:448)
-0x000000800421bc2c: process_cleanup (userprog/process.c:465)
+0x000000800422156d: supplemental_page_table_kill (vm/vm.c:460)
+0x000000800421bc2c: process_cleanup (userprog/process.c:449)
 0x000000800421b9e1: process_exec (userprog/process.c:345)
-0x000000800421d380: exec (userprog/syscall.c:256)
-0x000000800421ce76: syscall_handler (userprog/syscall.c:109)
-0x000000800421ccf2: no_sti (userprog/syscall-entry.o:?)
+0x000000800421d39a: exec (userprog/syscall.c:256)
+0x000000800421ce90: syscall_handler (userprog/syscall.c:109)
+0x000000800421cd0c: no_sti (userprog/syscall-entry.o:?)
 0x0000000000400342: (unknown)
 0x000000000040046e: (unknown)
 0x0000000000400f0f: (unknown)
