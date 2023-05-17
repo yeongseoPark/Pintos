@@ -238,9 +238,10 @@ vm_get_frame (void) {
 /* Growing the stack. */
 static void
 vm_stack_growth (void *addr UNUSED) {
-	if (is_kernel_vaddr(addr)) {
-		return false;
-	}
+	// if (is_kernel_vaddr(addr)) {
+	// 	return false;
+	// }
+	ASSERT(!is_kernel_vaddr(addr))
 
 	addr = pg_round_down(addr);
 
@@ -273,7 +274,8 @@ vm_try_handle_fault (struct intr_frame *f UNUSED, void *addr UNUSED,
     // 스택의 증가로 page fault를 해결할 수 있는지 확인
 	/*  */
     // if (f->rsp - 8 <= addr && addr <= USER_STACK && USER_STACK - 0x100000 <= addr) { // 0x100000 = 1MB(스택 사이즈 제한)
-	if (USER_STACK - 0x100000 <= f->rsp - 8 && f->rsp - 8 <= addr && addr <= thread_current()->stack_bottom) { // 0x100000 = 1MB(스택 사이즈 제한)
+	// 왜 -8? : so it may cause a page fault 8 bytes below the stack pointer..
+	if (USER_STACK - 0x100000 <= thread_current()->rsp_stack - 8 && thread_current()->rsp_stack - 8 <= addr && addr <= thread_current()->stack_bottom) { // 0x100000 = 1MB(스택 사이즈 제한)
         // 스택 증가 함수 호출
         // 주소를 현재 스택의 마지막 주소에서 새롭게 할당받을 크기인 PGSIZE로 넘겨줌
         vm_stack_growth(thread_current()->stack_bottom - PGSIZE);

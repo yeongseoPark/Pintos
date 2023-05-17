@@ -142,6 +142,11 @@ page_fault (struct intr_frame *f) {
 
 #ifdef VM
 	/* For project 3 and later. */
+	// 유저이면, rsp값을 thread구조체의 rsp_stack에 저장해야함(인터럽트 프레임의 rsp값을 커널 스택을 가리키는 값으로 바뀔테니까)
+	if (user) {
+		thread_current()->rsp_stack = f->rsp;
+	}
+
 	if (vm_try_handle_fault (f, fault_addr, user, write, not_present)) {
 		/* 애초에 여기서 들어오는 fault_addr 자체가 이상함 !!!!!!!!!! */
 		return;

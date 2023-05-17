@@ -4,7 +4,7 @@ Kernel command line: -q -f put fork-read put sample.txt run fork-read
 Pintos booting with: 
 	base_mem: 0x0 ~ 0x9fc00 (Usable: 639 kB)
 	ext_mem: 0x100000 ~ 0x13e0000 (Usable: 19,328 kB)
-Calibrating timer...  202,956,800 loops/s.
+Calibrating timer...  261,734,400 loops/s.
 hd0:0: detected 329 sector (164 kB) disk, model "QEMU HARDDISK", serial "QM00001"
 hd0:1: detected 20,160 sector (9 MB) disk, model "QEMU HARDDISK", serial "QM00002"
 hd1:0: detected 111 sector (55 kB) disk, model "QEMU HARDDISK", serial "QM00003"
@@ -21,12 +21,12 @@ Executing 'fork-read':
 (fork-read) end
 child: exit(0)
 Kernel PANIC at ../../filesys/inode.c:304 in inode_allow_write(): assertion `inode->deny_write_cnt > 0' failed.
-Call stack: 0x8004217ec2 0x8004220093 0x800421eeea 0x800421ec97 0x80042217f7 0x800422152e 0x800421a490 0x800422156d 0x800421bc2c 0x800421bbd8 0x80042076fb 0x800421d223 0x800421ce48 0x800421cd0c 0x400fed.
+Call stack: 0x8004217ec2 0x80042200e7 0x800421ef3e 0x800421eceb 0x8004221898 0x80042215cf 0x800421a490 0x800422160e 0x800421bc2c 0x800421bbd8 0x80042076fb 0x800421d277 0x800421ce97 0x800421cd39 0x400fed.
 The `backtrace' program can make call stacks useful.
 Read "Backtraces" in the "Debugging Tools" chapter
 of the Pintos documentation for more information.
-Timer: 72 ticks
-Thread: 46 idle ticks, 26 kernel ticks, 0 user ticks
+Timer: 66 ticks
+Thread: 33 idle ticks, 31 kernel ticks, 2 user ticks
 hd0:0: 0 reads, 0 writes
 hd0:1: 116 reads, 260 writes
 hd1:0: 111 reads, 0 writes

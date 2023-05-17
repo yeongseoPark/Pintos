@@ -151,7 +151,8 @@ struct thread {
 	/* Table for whole virtual memory owned by thread. -> vm_entry set역할을 하는 supplemental page table */
 	struct supplemental_page_table spt;
    void* stack_bottom; // 이게 왜필요함? : 스택은 lazy loading이 아니라 바로 생성되기때문에 따로 기록해주는듯 -> 스택의 마지막 부분 저장
-   void* rsp_stack;
+   void* rsp_stack; // exception(page fault), syscall 호출시 유저 -> 커널로 이관되는데, 이때 intr_frame의 rsp가 커널 스택을 가리키게 되니까, 
+   // 유저 스택의 값을 저장하고 있기 위해서 해당 값을 둠
 #endif
 
 	/* Owned by thread.c. */

@@ -88,6 +88,10 @@ void syscall_init (void) {
 
 /* The main system call interface */
 void syscall_handler (struct intr_frame *f UNUSED) {
+
+    // 여기서도 rsp_stack에 저장 -> 그거로 if문 바꾸저ㅜ면됨ㄴ
+    thread_current()->rsp_stack = f->rsp;
+
 	// TODO: Your implementation goes here.
     // ******************************LINE ADDED****************************** //
     // Project 2-2-1: User Programs - System Call - Basics

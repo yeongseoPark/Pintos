@@ -4,7 +4,7 @@ Kernel command line: -q -f put syn-read put child-syn-read run syn-read
 Pintos booting with: 
 	base_mem: 0x0 ~ 0x9fc00 (Usable: 639 kB)
 	ext_mem: 0x100000 ~ 0x13e0000 (Usable: 19,328 kB)
-Calibrating timer...  261,734,400 loops/s.
+Calibrating timer...  249,446,400 loops/s.
 hd0:0: detected 329 sector (164 kB) disk, model "QEMU HARDDISK", serial "QM00001"
 hd0:1: detected 20,160 sector (9 MB) disk, model "QEMU HARDDISK", serial "QM00002"
 hd1:0: detected 225 sector (112 kB) disk, model "QEMU HARDDISK", serial "QM00003"
@@ -20,12 +20,12 @@ Executing 'syn-read':
 (syn-read) write "data"
 (syn-read) close "data"
 Kernel PANIC at ../../filesys/inode.c:304 in inode_allow_write(): assertion `inode->deny_write_cnt > 0' failed.
-Call stack: 0x8004217ec2 0x8004220093 0x800421eeea 0x800421ec97 0x80042217f7 0x800422152e 0x800421a490 0x800422156d 0x800421bc2c 0x800421b9e1 0x800421d39a 0x800421ce90 0x800421cd0c 0x400758 0x4002a6 0x400fa7 0x400ff0.
+Call stack: 0x8004217ec2 0x80042200e7 0x800421ef3e 0x800421eceb 0x8004221898 0x80042215cf 0x800421a490 0x800422160e 0x800421bc2c 0x800421b9e1 0x800421d3ee 0x800421cedf 0x800421cd39 0x400758 0x4002a6 0x400fa7 0x400ff0.
 The `backtrace' program can make call stacks useful.
 Read "Backtraces" in the "Debugging Tools" chapter
 of the Pintos documentation for more information.
-Timer: 71 ticks
-Thread: 38 idle ticks, 31 kernel ticks, 2 user ticks
+Timer: 76 ticks
+Thread: 40 idle ticks, 34 kernel ticks, 2 user ticks
 hd0:0: 0 reads, 0 writes
 hd0:1: 136 reads, 504 writes
 hd1:0: 225 reads, 0 writes

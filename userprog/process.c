@@ -358,22 +358,6 @@ int process_exec (void *f_name) {
 
     argument_stack(arg_list, token_count, &_if); // 인자들도 유저 스택에 쌓아준다
 
-    // hex dump for Debugging
-    // !!! CAUTION !!! hex_dump 는 매개변수를 pos, buffer, size, boolean 로 받는다. Defined in stdio.c
-    // Dumps the SIZE bytes in BUF to the console as hex bytes arranged 16 per line.
-    // Numeric offsets are also included, starting at OFS for the first byte in BUF.
-    // If ASCII is true then the corresponding ASCII characters are also rendered alongside.
-
-    /*hex_dump(_if.rsp, _if.rsp, KERN_BASE - _if.rsp, true);*/
-
-    // KERN_BASE , USER_STACK 어떤걸 기준으로 hex_dump 할 것인지에 따라 page_fault 오류 야기시킴
-    // 0000000047480000  Page fault at 0x47480000: not present error reading page in kernel context. 의 원인.
-    // Gitbook Project 2 : USER PROGRAMS - Introduction - Virtual Memory Layout~Accessing User Memory를 참조하자.
-    /*hex_dump(_if.rsp, _if.rsp, KERN_BASE - _if.rsp, true);*/
-
-    // hex_dump(_if.rsp, _if.rsp, USER_STACK - _if.rsp, true);
-    // *************************ADDED LINE ENDS HERE************************* //
-
 	/* Start switched process. */
 	do_iret (&_if); // 사용자 프로세스로 CPU가 진짜 넘어감
 	// exec()에서 여태껏 만들어준 _if 구조체 안의 값으로 레지스터 값을 저장
@@ -962,7 +946,7 @@ static bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
 /* Create a PAGE of stack at the USER_STACK. Return true on success. 
    stack은 anonymous, 즉 연결된 파일이 없다. 따라서 lazy load 할 필요가 없다..?
 */
-static bool setup_stack (struct intr_frame *if_) {
+static bool setup_stack (struct intr_frame *if_) { 
 	bool success = false;
 	void *stack_bottom = (void *) (((uint8_t *) USER_STACK) - PGSIZE);
 
@@ -970,7 +954,6 @@ static bool setup_stack (struct intr_frame *if_) {
 	 * TODO: If success, set the rsp accordingly.
 	 * TODO: You should mark the page is stack. */
 	/* TODO: Your code goes here */
-
 	// VM_MARKER_0 은 스택을 의미
 	if (vm_alloc_page_with_initializer(VM_STACK, stack_bottom, true, NULL, NULL))
     {   
@@ -979,10 +962,15 @@ static bool setup_stack (struct intr_frame *if_) {
         {   
             // rsp 설정
             if_->rsp = USER_STACK;
+			/* 궁금: USER_STACK은 유저 스택의 시작점인데, 인터럽트 프레임의 rsp는 유저 스택의 끝을 가리켜야 하는거 아님??
+			그리고 지금 코드면, stack_bottom은 계속 밑으로 내려가는게 아니라, 그냥 유저 스택의 시작점에서 한단계 밑의 페이지자나..
+			ㄴ 이게 맞다. 왜? setup_stack은 맨 처음에 프로세스 만들때 load에서 딱 한번만 호출되기 때문에, 한 페이지 크기만큼만 밑으로 내려가는게 맞음
+			ㄴ 마찬가지로 rsp도 USER_STACK을 가리켜서 initial rsp를 USER_STACK과 동일하게 두는게 맞음
+			*/
 
 			/* ----------------------------------- project3-2_Stack Growth ----------------------------------- */ 
             // 스택의 끝부분 저장
-            // thread_current()->stack_bottom = stack_bottom;
+            thread_current()->stack_bottom = stack_bottom;
 			/* ----------------------------------- project3-2_Stack Growth ----------------------------------- */ 
 
             // success를 true로 값 변경
