@@ -28,6 +28,8 @@ vm_init (void) {
 	start = list_begin(&frame_table);
 }
 
+
+
 /* Get the type of the page. This function is useful if you want to know the
  * type of the page after it will be initialized.
  * This function is fully implemented now. */

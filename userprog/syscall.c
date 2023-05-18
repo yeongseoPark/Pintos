@@ -46,6 +46,12 @@ static struct file *find_file_by_fd(int fd);
 int add_file_to_fdt(struct file *file);
 void remove_file_from_fdt(int fd);
 
+/* -------- project 3 : memory mapped files -------------- */
+void* mmap(void *addr, size_t length, int writable, int fd, off_t offset);
+
+void munmap(void* addr);
+/* -------- project 3 : memory mapped files -------------- */
+
 const int STDIN = 1;
 const int STDOUT = 2;
 // *************************ADDED LINE ENDS HERE************************* //
@@ -92,7 +98,7 @@ void syscall_handler (struct intr_frame *f UNUSED) {
     // 여기서도 rsp_stack에 저장 -> 그거로 if문 바꾸저ㅜ면됨ㄴ
     thread_current()->rsp_stack = f->rsp;
 
-	// TODO: Your implementation goes here.
+	// TODO: Your implxementation goes here.
     // ******************************LINE ADDED****************************** //
     // Project 2-2-1: User Programs - System Call - Basics
     // Defined as enum @ include/lib/syscall-nr.h
@@ -146,6 +152,17 @@ void syscall_handler (struct intr_frame *f UNUSED) {
         case SYS_CLOSE: // Close a file.
             close(f -> R.rdi);
             break;
+
+        /* -------------- project 3 - memory_mapped_files ------------*/
+        case SYS_MMAP:
+            f->R.rax = mmap(f->R.rdi, f->R.rsi, f->R.rdx, f->R.r10, f->R.r8);
+            break;
+        
+        case SYS_MUNMAP:
+            munmap(f->R.rdi);
+            break;
+        /* -------------- project 3 - memory_mapped_files ------------*/
+
         default:
             /*printf ("system call!\n");
             thread_exit ();*/
@@ -427,4 +444,39 @@ void close(int fd){
     remove_file_from_fdt(fd);
 }
 // *************************ADDED LINE ENDS HERE************************* //
+
+/* ---------------- project 3: memory mapped files --------------- */
+void* mmap(void *addr, size_t length, int writable, int fd, off_t offset) {
+    /* Return NULL하는 경우
+        1. addr이 0
+        2. addr이 커널 가상주소 : is_kernel_vaddr(addr) || is_kernel_vaddr(pg_round_up(addr))
+        3. addr이 page-align되지 않은 경우
+        4. 기존에 매핑된 지역과 겹치는 경우
+        5 읽으려는 파일의 오프셋 위치가 PGSIZE보다 큰 경우
+        6. 읽으려는 파일의 길이가 0보다 작거나 같은 경우
+    */
+
+    if (addr == 0 || is_kernel_vaddr(addr) || is_kernel_vaddr(pg_round_up(addr)) || pg_round_down(addr) != addr \
+        || spt_find_page(&thread_current()->spt, addr) || offset > PGSIZE || (long)length <= 0) 
+    {
+		return NULL; 
+	}
+
+    struct file *file = find_file_by_fd(fd);
+
+    /* 
+    7. fd가 STDOUT, STDIN인경우
+    8. 읽으려는 파일이 존재하지 않는 경우
+    9. 열린 파일의 길이가 0인경우
+     */
+    if (fd <= STDOUT || file == NULL || file_length(file) == 0) {
+        return NULL;
+    }
+
+    return do_mmap(addr, length, writable, file, offset);
+}
+
+void munmap(void* addr) {
+    do_munmap(addr);
+}
 

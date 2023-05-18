@@ -21,12 +21,12 @@ Executing 'fork-read':
 (fork-read) end
 child: exit(0)
 Kernel PANIC at ../../filesys/inode.c:304 in inode_allow_write(): assertion `inode->deny_write_cnt > 0' failed.
-Call stack: 0x8004217ec2 0x80042200e7 0x800421ef3e 0x800421eceb 0x8004221898 0x80042215cf 0x800421a490 0x800422160e 0x800421bc2c 0x800421bbd8 0x80042076fb 0x800421d277 0x800421ce97 0x800421cd39 0x400fed.
+Call stack: 0x8004217ec2 0x8004220296 0x800421f0ed 0x800421ee9a 0x8004221a47 0x800422177e 0x800421a490 0x80042217bd 0x800421bc2c 0x800421bbd8 0x80042076fb 0x800421d2e9 0x800421ce97 0x800421cd39 0x400fed.
 The `backtrace' program can make call stacks useful.
 Read "Backtraces" in the "Debugging Tools" chapter
 of the Pintos documentation for more information.
-Timer: 66 ticks
-Thread: 33 idle ticks, 31 kernel ticks, 2 user ticks
+Timer: 70 ticks
+Thread: 40 idle ticks, 29 kernel ticks, 1 user ticks
 hd0:0: 0 reads, 0 writes
 hd0:1: 116 reads, 260 writes
 hd1:0: 111 reads, 0 writes
