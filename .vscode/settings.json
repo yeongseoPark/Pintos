@@ -15,6 +15,9 @@
         "deque": "c",
         "vector": "c",
         "unordered_map": "c",
-        "sstream": "c"
+        "sstream": "c",
+        "vm.h": "c",
+        "synch.h": "c",
+        "file.h": "c"
     }
 }

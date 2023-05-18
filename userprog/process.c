@@ -332,12 +332,16 @@ int process_exec (void *f_name) {
 	process_cleanup ();
 
     // ******************************LINE MODDED****************************** //
+	struct thread *curr = thread_current();
+	supplemental_page_table_init (&curr->spt);
+
 	/* And then load the binary */
 	/* ELF : 사용자 프로세스를 실행하는데 사용.
 	   핀토스의 사용자 프로세스는 ELF파일로부터 읽힌 코드와 데이터를 메모리에 로드하여 실행됨
 	   load()가 하는일 : 페이지테이블 만들고, 파일을 열고, ELF실행파일이 올바른지 확인, ELF의 프로그램 헤더 테이블 읽어서 메모리에 로드, 
 	 */
 	success = load (file_name, &_if); 
+	ASSERT(success);	// @
     /*memset(&_if, 0, sizeof _if);
     success = load(file_name_copy, &_if);*/
     // *************************ADDED LINE ENDS HERE************************* //
@@ -949,8 +953,8 @@ static bool setup_stack (struct intr_frame *if_) {
 		success = vm_claim_page(stack_bottom);	// mapping (install_page)
 	
 		if (success) {
-			if_->rsp = USER_STACK;
-			thread_current()->stack_bottom = stack_bottom;	// mark the page is stack?
+			if_->rsp = USER_STACK; // set the rsp (stack pointer) of the intr_frame to the USER_STACK address. 
+			thread_current()->stack_bottom = stack_bottom;	// mark the page is stack? checking stack overflow conditions.
 		}
 	}
 	return success;

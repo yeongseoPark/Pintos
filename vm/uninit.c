@@ -29,7 +29,7 @@ uninit_new (struct page *page, void *va, vm_initializer *init,
 		bool (*initializer)(struct page *, enum vm_type, void *)) {
 	ASSERT (page != NULL);
 
-	*page = (struct page) {
+	*page = (struct page) {				// dereferenced to access actual struct page
 		.operations = &uninit_ops,
 		.va = va,
 		.frame = NULL, /* no frame for now */
@@ -65,4 +65,11 @@ uninit_destroy (struct page *page) {
 	struct uninit_page *uninit UNUSED = &page->uninit;
 	/* TODO: Fill this function.
 	 * TODO: If you don't have anything to do, just return. */
+	// UNINIT TYPE의 page_operations uninit_ops-> .destroy에 해당하는 부분
 }
+
+/*
+이 함수의 목적: provide a convenient way to access the uninit_page object
+uninit 포인터 변수를 선언, page->uninit 주소를 할당함으로써 
+uninit_destroy 함수는 이러한 uninit pointer를 사용해 uninit_page 오브젝트에 접근할 수 있다.
+*/

@@ -11,6 +11,7 @@
 #include "threads/synch.h"
 #include "threads/vaddr.h"
 #include "intrinsic.h"
+#include "vm/vm.h"
 
 #ifdef USERPROG
 #include "userprog/process.h"
@@ -446,7 +447,7 @@ tid_t thread_create(const char *name, int priority, thread_func *function, void 
     // 위의 GDT셀렉터들은 각 세그먼트에 대한 디스크립터
 
     // ************************* Project 3 ADDED ************************* //
-    supplemental_page_talbe_init(&t->spt);
+    // supplemental_page_table_init(&t->spt);
 
     // ************************* Project 3 END ************************* //
 

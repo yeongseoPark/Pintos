@@ -37,8 +37,8 @@ vm_anon_init (void) {
 bool
 anon_initializer (struct page *page, enum vm_type type, void *kva) {
 	// new anon page: uninit 필드를 0으로 초기화
-	struct uninit_page *uninit = &page->uninit;
-	memset(uninit, 0, sizeof(struct uninit_page));
+	// struct uninit_page *uninit = &page->uninit;
+	// memset(uninit, 0, sizeof(struct uninit_page));
 
 	/* Set up the handler */
 	page->operations = &anon_ops;

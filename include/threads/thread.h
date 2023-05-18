@@ -157,6 +157,7 @@ struct thread {
 	unsigned magic;                     /* Detects stack overflow. */
 
 // ************************* LINE ADDED ************************* //
+   void *rsp_stack;     // 커널로 이관 전 유저 스택값을 저장해두기 위함. 
    void *stack_bottom;
 };
 
