@@ -10,7 +10,7 @@
 struct list frame_table; // frame entry의 리스트로 구성된 frame table
 // 비어있는 프레임들이 연결돼있는 연결리스트
 // 빈 프레임이 필요할시에 그냥 앞에서 꺼내오면 됨
-static struct list_elem *start = NULL; // frame_table의 시작점. 여기 선언하는게 맞는지 모르겠음
+static struct list_elem *start = NULL; 
 
 /* Initializes the virtual memory subsystem by invoking each subsystem's
  * intialize codes. */
@@ -104,10 +104,6 @@ err:
 struct page *
 spt_find_page (struct supplemental_page_table *spt UNUSED, void *va UNUSED) {
 	/* TODO: Fill this function. */
-	// va를 가지고 어떻게 해당하는 hash_elem을 찾지??
-	// dummy page를 만들고, 그것의 가상주소를 va로 만든후에 그 페이지의 hash_elem을 넣는다고?? 그러면, 해당 가상주소에 두개의 페이지가 있는거 아님??
-	// struct page *dummy_page = (struct page*)malloc(sizeof(struct page));
-	// dummy_page->va = va;
 
 	struct page *page = (struct page *)calloc(1, sizeof(struct page));
     struct hash_elem *hash_elem;
@@ -132,7 +128,7 @@ spt_find_page (struct supplemental_page_table *spt UNUSED, void *va UNUSED) {
     }
 }
 
-/* Insert PAGE into spt with validation. -> 구현 필요 */
+/* Insert PAGE into spt with validation. */
 bool
 spt_insert_page (struct supplemental_page_table *spt UNUSED,
 		struct page *page UNUSED) {
@@ -212,7 +208,7 @@ vm_evict_frame (void) {
  * */
 static struct frame *
 vm_get_frame (void) {
-	struct frame *frame = (struct frame*)calloc(1, sizeof(struct frame));
+	struct frame *frame = (struct frame*)malloc(sizeof(struct frame));
 	/* TODO: Fill this function. */
 	ASSERT (frame != NULL);
 	ASSERT (frame->page == NULL);
