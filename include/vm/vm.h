@@ -12,7 +12,7 @@ enum vm_type
 	VM_UNINIT = 0,
 	/* page not related to the file, aka anonymous page */
 	VM_ANON = 1,
-	/* page that realated to the file */
+	/* page that related to the file */
 	VM_FILE = 2,
 	/* page that hold the page cache, for project 4 */
 	VM_PAGE_CACHE = 3,
@@ -41,14 +41,6 @@ struct thread;
 struct hash_elem;
 /* 끝 */
 
-#define VM_TYPE(type) ((type)&7)
-
-/* 준코(05/12) : 구조체 만들기  */
-// struct hash_elem{
-// 내용 추가해야해
-// PPT 내용 : Hash table(src/lib/kernel/hash.*), Linked list, or etc
-// };
-/* 준코 끝 */
 /* The representation of "page".
  * This is kind of "parent class", which has four "child class"es, which are
  * uninit_page, file_page, anon_page, and page cache (project4).

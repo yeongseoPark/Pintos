@@ -431,6 +431,9 @@ tid_t thread_create(const char *name, int priority, thread_func *function, void 
     t->stdin_count = 1;
     t->stdout_count = 1;
 
+    /* 준코(05/15) */
+    supplemental_page_table_init(&t->spt);
+
     // *************************ADDED LINE ENDS HERE************************* //
 
     /* Call the kernel_thread if it scheduled.

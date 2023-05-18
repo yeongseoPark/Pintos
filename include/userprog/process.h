@@ -24,12 +24,12 @@ static bool install_page(void *upage, void *kpage, bool writable);
 static bool load_segment(struct file *file, off_t ofs, uint8_t *upage,
                          uint32_t read_bytes, uint32_t zero_bytes, bool writable);
 
-struct aux
+struct load_aux
 {
     struct file *file;
     off_t ofs;
-    size_t read_bytes;
-    size_t zero_bytes;
+    size_t page_read_bytes;
+    size_t page_zero_bytes;
 };
 
 bool lazy_load_segment(struct page *page, void *aux);

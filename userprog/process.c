@@ -32,6 +32,8 @@ static void process_cleanup(void);
 static bool load(const char *file_name, struct intr_frame *if_);
 static void initd(void *f_name);
 static void __do_fork(void *);
+struct thread *get_child(int pid);
+static bool install_page(void *upage, void *kpage, bool writable);
 
 // ******************************LINE ADDED****************************** //
 // Project 2-1 : User Programs - Argument Passing
@@ -65,15 +67,15 @@ tid_t process_create_initd(const char *file_name)
 		return TID_ERROR;
 	strlcpy(fn_copy, file_name, PGSIZE);
 
+	strtok_r(file_name, " ", &save_ptr);
 	/* Create a new thread to execute FILE_NAME. */
 	// ******************************LINE MODDED****************************** //
 	// Project 2-2-2 : User Programs - System Call - File Descriptor
-	file_name = strtok_r(file_name, " ", &save_ptr);
-	tid = thread_create(file_name, PRI_DEFAULT, initd, fn_copy);
-	// *************************MODDED LINE ENDS HERE************************* //
-
 	if (tid == TID_ERROR)
 		palloc_free_page(fn_copy);
+	// *************************MODDED LINE ENDS HERE************************* //
+
+
 	return tid;
 }
 
@@ -131,21 +133,21 @@ tid_t process_fork(const char *name, struct intr_frame *if_)
 	따라서 tf의 rsp는 현재 userland context를 보고 있지 않은것.
 	*/
 
-	tid_t pid = thread_create(name, PRI_DEFAULT, __do_fork, curr);
+	tid_t tid = thread_create(name, PRI_DEFAULT, __do_fork, curr);
 
-	if (pid == TID_ERROR)
+	if (tid == TID_ERROR)
 	{
 		return TID_ERROR;
 	}
 
-	struct thread *child = get_child(pid);
+	struct thread *child = get_child(tid); /* 준코(05/15) pid -> tid */
 
 	sema_down(&child->fork_sema); // 자식 프로세스 로드 완료될때까지 기다림 (__do_fork에서 FDT까지 복사를 완료하면 up해줌)
 
 	if (child->exit_status == -1)
 		return TID_ERROR;
 
-	return pid;
+	return tid;
 	// *************************ADDED LINE ENDS HERE************************* //
 }
 
@@ -323,7 +325,7 @@ int process_exec(void *f_name)
 	char *token, *save_ptr;
 	int token_count = 0;
 
-	token = strtok_r(file_name, " ", &save_ptr);
+	token = strtok_r(f_name, " ", &save_ptr); /* 준코(05/15) file_name -> f_name */
 	arg_list[token_count] = token;
 
 	while (token != NULL)
@@ -359,6 +361,7 @@ int process_exec(void *f_name)
 	// *************************ADDED LINE ENDS HERE************************* //
 
 	/* If load failed, quit. */
+	
 	if (!success)
 	{
 		palloc_free_page(file_name);
@@ -439,7 +442,7 @@ int process_wait(tid_t child_tid UNUSED)
 void process_exit(void)
 {
 	struct thread *curr = thread_current();
-	uint32_t *pd; /* 준코(05/12) */
+	// uint32_t *pd; /* 준코(05/12) */
 				  /* TODO: Your code goes here.
 				   * TODO: Implement process termination message (see
 				   * TODO: project2/process_termination.html).
@@ -620,12 +623,12 @@ void argument_stack(char **argv, int argc, struct intr_frame *if_)
 /* page fault 발생하면, 물리 메모리 할당한다. */
 /* 디스크에서 물리 메모리로 파일 load한다.(load_file()) */
 /* 물리 메모리로 로드 후 관련된 PTE 업데이트한다.(install_page()) */
-bool handle_mm_fault(struct hash_elem *vme)
-{
+// bool handle_mm_fault(struct hash_elem *vme)
+
 	/* 물리메모리 할당 */
 	/* load_file(void* akddr, struct hash_elem *vme) */
 	/* install_page(void *upage, void *kpage, bool writable) */
-}
+
 // *************************ADDED LINE ENDS HERE************************* //
 
 /* Loads an ELF executable from FILE_NAME into the current thread.
@@ -765,7 +768,7 @@ struct thread *get_child(int pid)
 	struct list_elem *e;
 	if (list_empty(child_list))
 		return NULL;
-	for (e = list_begin(child_list); e != list_end(child_list); e = list_next(e))
+	for (struct list_elem *e = list_begin(&curr->child_list); e != list_end(&curr->child_list); e = list_next(e))
 	{
 		struct thread *t = list_entry(e, struct thread, child_elem);
 		if (t->tid == pid)
@@ -827,7 +830,7 @@ static bool validate_segment(const struct Phdr *phdr, struct file *file)
  * outside of #ifndef macro. */
 
 /* load() helpers. */
-static bool install_page(void *upage, void *kpage, bool writable);
+
 
 /* Loads a segment starting at offset OFS in FILE at address
  * UPAGE.  In total, READ_BYTES + ZERO_BYTES bytes of virtual
@@ -861,31 +864,30 @@ static bool load_segment(struct file *file, off_t ofs, uint8_t *upage,
 		/* Do calculate how to fill this page.
 		 * We will read read_BYTES bytes from FILE
 		 * and zero the final zero_BYTES bytes. */
-		size_t read_bytes = read_bytes < PGSIZE ? read_bytes : PGSIZE;
-		size_t zero_bytes = PGSIZE - read_bytes;
+		size_t page_read_bytes = read_bytes < PGSIZE ? read_bytes : PGSIZE;
+		size_t page_zero_bytes = PGSIZE - page_read_bytes;
 
 		/* create hash_elem(use malloc)*
 /* setting hash_elem members, offset and size of file to read when virtual page is required, zero byte to pad at the end/
 
-	/* 준코(05/12) : ppt에서 삭제하래서 주석처리 */
 		/* Get a page of memory. */
-		// uint8_t *kpage = palloc_get_page (PAL_USER);
-		// if (kpage == NULL)
-		// 	return false;
+		uint8_t *kpage = palloc_get_page (PAL_USER);
+		if (kpage == NULL)
+			return false;
 
-		// /* Load this page. */
-		// if (file_read (file, kpage, read_bytes) != (int) read_bytes) {
-		// 	palloc_free_page (kpage);
-		// 	return false;
-		// }
-		// memset (kpage + read_bytes, 0, zero_bytes);
+		/* Load this page. */
+		if (file_read (file, kpage, page_read_bytes) != (int) page_read_bytes) {
+			palloc_free_page (kpage);
+			return false;
+		}
+		memset (kpage + page_read_bytes, 0, page_zero_bytes);
 
-		// /* Add the page to the process's address space. */
-		// if (!install_page (upage, kpage, writable)) {
-		// 	printf("fail\n");
-		// 	palloc_free_page (kpage);
-		// 	return false;
-		// }
+		/* Add the page to the process's address space. */
+		if (!install_page (upage, kpage, writable)) {
+			printf("fail\n");
+			palloc_free_page (kpage);
+			return false;
+		}
 		/* 준코(05/12) : 추가부분*/
 
 		/* hash_elem 생성 (malloc 사용) */
@@ -895,8 +897,8 @@ static bool load_segment(struct file *file, off_t ofs, uint8_t *upage,
 		/* 준코 끝 */
 
 		/* Advance. */
-		read_bytes -= read_bytes;
-		zero_bytes -= zero_bytes;
+		read_bytes -= page_read_bytes;
+		zero_bytes -= page_zero_bytes;
 		upage += PGSIZE;
 	}
 	return true;
@@ -917,11 +919,6 @@ static bool setup_stack(struct intr_frame *if_)
 		else
 			palloc_free_page(kpage);
 	}
-
-	/* 준코(05/12) */
-	/* hash_elem 생성 */
-	/* hash_elem 원소 설치 */
-	/* insert_vme()를 사용해 hash_elem를 해쉬 테이블에 추가 */
 	return success;
 }
 
@@ -934,14 +931,14 @@ static bool setup_stack(struct intr_frame *if_)
  * with palloc_get_page().
  * Returns true on success, false if UPAGE is already mapped or
  * if memory allocation fails. */
-static bool install_page(void *upage, void *kpage, bool writable)
-{
-	struct thread *t = thread_current();
+static bool install_page(void *upage, void *kpage, bool writable);
+
+	// struct thread *t = thread_current();
 
 	/* Verify that there's not already a page at that virtual
 	 * address, then map our page there. */
-	return (pml4_get_page(t->pml4, upage) == NULL && pml4_set_page(t->pml4, upage, kpage, writable));
-}
+	// return (pml4_get_page(t->pml4, upage) == NULL && pml4_set_page(t->pml4, upage, kpage, writable));
+
 
 /* ----------------- if VM defined ------------------*/
 #else
@@ -954,24 +951,30 @@ bool lazy_load_segment(struct page *page, void *aux)
 	/* TODO: Load the segment from the file */
 	/* TODO: This called when the first page fault occurs on address VA. */
 	/* TODO: VA is available when calling this function. */
-	struct frame *frame = page->frame;
-	struct file *file = ((struct aux *)aux)->file;
+	/* 준코(05/15) */
+	struct load_aux *lazy_load_aux = (struct load_aux *)aux;
+	size_t page_read_bytes = lazy_load_aux ->page_read_bytes;
+	size_t page_zero_bytes = lazy_load_aux ->page_zero_bytes;
+	struct file *file = lazy_load_aux->file;
+	off_t ofs = lazy_load_aux ->ofs;
 
-
-	off_t ofs = ((struct aux *)aux)->ofs;
-	size_t read_bytes = ((struct aux *)aux)->read_bytes;
-	size_t zero_bytes = PGSIZE - read_bytes;
+	/* 준코(05/13) */
+	// struct file *file = ((struct container *)aux)->file;
+	// off_t ofs = ((struct container *)aux)->ofs;
+	// size_t page_read_bytes = ((struct container *)aux)->page_read_bytes;
+	// size_t page_zero_bytes = PGSIZE - page_read_bytes;
 
 	file_seek(file, ofs);
 
-	if (file_read(file, page->frame->kva, read_bytes) != (int)read_bytes)
+	if (file_read(file, page->frame->kva, page_read_bytes) != (int)page_read_bytes)
 	{
 		palloc_free_page(page->frame->kva);
 		return false;
 	}
-	memset(page->frame->kva + read_bytes, 0, zero_bytes);
-	file_seek(file, ofs);
-	return true;
+	else{
+		memset(page->frame->kva + page_read_bytes, 0, page_zero_bytes);
+		return true;
+	}
 }
 
 /* Loads a segment starting at offset OFS in FILE at address
@@ -1001,25 +1004,26 @@ static bool load_segment(struct file *file, off_t ofs, uint8_t *upage,
 		/* Do calculate how to fill this page.
 		 * We will read read_BYTES bytes from FILE
 		 * and zero the final zero_BYTES bytes. */
-		size_t read_bytes = read_bytes < PGSIZE ? read_bytes : PGSIZE;
-		size_t zero_bytes = PGSIZE - read_bytes;
+		size_t page_read_bytes = read_bytes < PGSIZE ? read_bytes : PGSIZE;
+		size_t page_zero_bytes = PGSIZE - page_read_bytes;
 
 		/* TODO: Set up aux to pass information to the lazy_load_segment. */
 		/* 준코(05/13) */
-		struct aux *aux = (struct aux *)calloc(1, sizeof(struct aux));
-		aux->read_bytes = read_bytes;
-		aux->zero_bytes = zero_bytes;
-		aux->file = file;
-		aux->ofs = ofs;
+		struct load_aux *load_aux = (struct load_aux *)malloc(sizeof(struct load_aux));
+		load_aux->page_read_bytes = page_read_bytes;
+		load_aux->page_zero_bytes = page_zero_bytes;
+		load_aux->file = file;
+		load_aux->ofs = ofs;
 
 		if (!vm_alloc_page_with_initializer(VM_ANON, upage,
-											writable, lazy_load_segment, aux))
+											writable, lazy_load_segment, load_aux))
 			return false;
 
 		/* Advance. */
-		read_bytes -= read_bytes;
-		zero_bytes -= zero_bytes;
+		read_bytes -= page_read_bytes;
+		zero_bytes -= page_zero_bytes;
 		upage += PGSIZE;
+		ofs += page_read_bytes;
 	}
 	return true;
 }
