@@ -84,10 +84,10 @@ bool vm_alloc_page_with_initializer(enum vm_type type, void *upage, bool writabl
 		/* 준코(05/13) */
 		struct page *page = (struct page *)malloc(sizeof(struct page));
 
-		typedef bool (*page_initializer)(struct page *, enum vm_type, void *);
+		typedef bool (*page_initializer)(struct page *, enum vm_type, void *); // 다름 typedef
 		page_initializer initializer = NULL;
 
-		switch(VM_TYPE(type))
+		switch(VM_TYPE(type)) // 다름 VM_TYPE(type),type 
 		{
 			case VM_ANON:
 				initializer = anon_initializer;
@@ -100,7 +100,7 @@ bool vm_alloc_page_with_initializer(enum vm_type type, void *upage, bool writabl
 		uninit_new(page, upage, init, type, aux, initializer);
 		page->writable = writable;
 
-		return spt_insert_page(spt, page);
+		return spt_insert_page(spt, page); //다름
 	}
 err:
 	return false;
@@ -127,12 +127,16 @@ spt_find_page(struct supplemental_page_table *spt UNUSED, void *va UNUSED)
 
 /* Insert PAGE into spt with validation. -> 구현 필요 */
 /* 준코(05/12) : UNUSED 지움 */
+/* 준코(05/18) */
 
 bool spt_insert_page(struct supplemental_page_table *spt,
 					 struct page *page)
 {
 		int succ = false;
-		return page_insert(&spt->page_table, page);
+		struct hash_elem = hash_find(&spt->page_table, &page->e);
+
+		if (hash_find(&pst-> e, &page->hash_elem) != NULL)
+		return succ;
 }
 
 
