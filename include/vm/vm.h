@@ -67,6 +67,10 @@ struct page {
 	bool writable;
 	bool stack; // 스택 표시
 
+
+	/* memory mapped file 추가 */
+	// bool dirty_bit;
+
 	/* Per-type data are binded into the union.
 	 * Each function automatically detects the current union */
 	union {

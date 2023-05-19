@@ -146,10 +146,13 @@ do_munmap (void *addr) {
 		struct info_aux *if_aux = (struct info_aux*)pg->uninit.aux;
 
 		// 변경사항이 있음
-		if (pml4_is_dirty(&cur_thread->pml4, addr)) {
+		if (pml4_is_dirty(cur_thread->pml4, addr)) {
 			
 			file_write_at(if_aux->file, pg->frame->kva, if_aux->read_bytes, if_aux->offset);
+
+			pml4_set_dirty(cur_thread->pml4 , addr , 0);
 		}
+
 
 		pml4_clear_page(&cur_thread->pml4, addr);
 

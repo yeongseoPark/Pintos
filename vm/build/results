@@ -81,7 +81,7 @@ pass tests/vm/mmap-close
 pass tests/vm/mmap-unmap
 pass tests/vm/mmap-overlap
 pass tests/vm/mmap-twice
-FAIL tests/vm/mmap-write
+pass tests/vm/mmap-write
 FAIL tests/vm/mmap-ro
 FAIL tests/vm/mmap-exit
 pass tests/vm/mmap-shuffle
@@ -98,7 +98,7 @@ pass tests/vm/mmap-zero
 pass tests/vm/mmap-bad-fd2
 pass tests/vm/mmap-bad-fd3
 pass tests/vm/mmap-zero-len
-FAIL tests/vm/mmap-off
+pass tests/vm/mmap-off
 pass tests/vm/mmap-bad-off
 pass tests/vm/mmap-kernel
 FAIL tests/vm/lazy-file
