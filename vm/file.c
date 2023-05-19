@@ -127,18 +127,32 @@ do_mmap (void *addr, size_t length, int writable,
 
 /* Do the munmap
 - unmap을 할때 프로세스에 의해 쓰인 모든 페이지는 file에 다시 쓰인다 (zero로 채운 부분은 그렇지 않음)
+- 매핑을 해제한다
+- 페이지를 지우는건 아니다
  */
 void
 do_munmap (void *addr) {
-	struct page *cur_page = spt_find_page(&thread_current()->spt, pg_round_up(addr));
-	struct file *mapped_file = cur_page->file.mapped_file;
-	off_t offset = cur_page->file.offset;
-	cur_page->file.mapped_file = NULL; // 매핑 해제
+	struct thread *cur_thread = thread_current();
 
-	// mapped_file->pos = offset; // offset부터 변경된 값들을 복사해 넣을 것
-	file_seek(mapped_file, offset);
-	
-	file_write(mapped_file->pos, cur_page->frame->kva, cur_page->file.read_bytes);
+	addr = pg_round_up(addr);
 
-	spt_remove_page(&thread_current()->spt, cur_page);
+	while (true) {
+		struct page *pg;
+
+		if ((pg = spt_find_page(&cur_thread->spt, addr)) == NULL) {
+			return false; 
+		}
+
+		struct info_aux *if_aux = (struct info_aux*)pg->uninit.aux;
+
+		// 변경사항이 있음
+		if (pml4_is_dirty(&cur_thread->pml4, addr)) {
+			
+			file_write_at(if_aux->file, pg->frame->kva, if_aux->read_bytes, if_aux->offset);
+		}
+
+		pml4_clear_page(&cur_thread->pml4, addr);
+
+		addr += PGSIZE;
+	}
 }
