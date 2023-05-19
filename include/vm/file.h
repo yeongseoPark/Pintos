@@ -7,12 +7,15 @@ struct page;
 enum vm_type;
 
 struct file_page {
-   void* zeroed_start; // mmap -> zero로 채운 값들의 시작점(file_backed)
 
    struct file *mapped_file; // 연결된 파일
 
    // 파일을 읽고자하는 시작점
    off_t offset;
+
+   size_t read_bytes;
+
+   size_t zero_bytes;
 };
 
 void vm_file_init (void);

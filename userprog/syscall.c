@@ -52,7 +52,7 @@ void* mmap(void *addr, size_t length, int writable, int fd, off_t offset);
 void munmap(void* addr);
 /* -------- project 3 : memory mapped files -------------- */
 
-const int STDIN = 1;
+const int STDIN  = 1;
 const int STDOUT = 2;
 // *************************ADDED LINE ENDS HERE************************* //
 
@@ -456,7 +456,7 @@ void* mmap(void *addr, size_t length, int writable, int fd, off_t offset) {
         6. 읽으려는 파일의 길이가 0보다 작거나 같은 경우
     */
 
-    if (addr == 0 || is_kernel_vaddr(addr) || is_kernel_vaddr(pg_round_up(addr)) || pg_round_down(addr) != addr \
+    if (addr == 0 || is_kernel_vaddr(addr) || is_kernel_vaddr(pg_round_up(addr)) || (uint64_t)addr % PGSIZE != 0 \
         || spt_find_page(&thread_current()->spt, addr) || offset > PGSIZE || (long)length <= 0) 
     {
 		return NULL; 
@@ -469,7 +469,8 @@ void* mmap(void *addr, size_t length, int writable, int fd, off_t offset) {
     8. 읽으려는 파일이 존재하지 않는 경우
     9. 열린 파일의 길이가 0인경우
      */
-    if (fd <= STDOUT || file == NULL || file_length(file) == 0) {
+    // if (fd <= STDOUT || file == NULL || file_length(file) == 0) {
+    if (file == NULL || file_length(file) == 0) {    
         return NULL;
     }
 

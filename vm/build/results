@@ -79,10 +79,10 @@ pass tests/vm/page-shuffle
 FAIL tests/vm/mmap-read
 FAIL tests/vm/mmap-close
 FAIL tests/vm/mmap-unmap
-FAIL tests/vm/mmap-overlap
+pass tests/vm/mmap-overlap
 FAIL tests/vm/mmap-twice
 FAIL tests/vm/mmap-write
-FAIL tests/vm/mmap-ro
+pass tests/vm/mmap-ro
 FAIL tests/vm/mmap-exit
 FAIL tests/vm/mmap-shuffle
 pass tests/vm/mmap-bad-fd
@@ -109,7 +109,7 @@ FAIL tests/vm/swap-iter
 FAIL tests/vm/swap-fork
 pass tests/filesys/base/lg-create
 pass tests/filesys/base/lg-full
-FAIL tests/filesys/base/lg-random
+pass tests/filesys/base/lg-random
 pass tests/filesys/base/lg-seq-block
 pass tests/filesys/base/lg-seq-random
 pass tests/filesys/base/sm-create

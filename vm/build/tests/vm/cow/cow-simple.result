@@ -1,17 +1,17 @@
 FAIL
 Kernel panic in run: PANIC at ../../lib/kernel/bitmap.c:234 in bitmap_contains(): assertion `start <= b->bit_cnt' failed.
-Call stack: 0x8004217ec2 0x8004219ec4 0x800421a018 0x800421ea59 0x800421fd87 0x800421eeb0 0x8004221a47 0x800422177e 0x800421a490 0x80042217bd 0x800421bc2c 0x800421bbd8 0x80042076fb 0x800421d2e9 0x800421ce97 0x800421cd39 0x40066d 0x400291 0x400ef2 0x400f3b
+Call stack: 0x8004217ec2 0x8004219ec4 0x800421a018 0x800421ea4d 0x800421fd7b 0x800421eea4 0x8004221a3b 0x8004221772 0x800421a490 0x80042217b1 0x800421bc2c 0x800421bbd8 0x80042076fb 0x800421d2e9 0x800421ce97 0x800421cd39 0x40066d 0x400291 0x400ef2 0x400f3b
 Translation of call stack:
 0x0000008004217ec2: debug_panic (lib/kernel/debug.c:32)
 0x0000008004219ec4: bitmap_contains (lib/kernel/bitmap.c:235)
 0x000000800421a018: bitmap_all (lib/kernel/bitmap.c:261)
-0x000000800421ea59: free_map_release (filesys/free-map.c:42)
-0x000000800421fd87: inode_close (filesys/inode.c:163)
-0x000000800421eeb0: file_close (filesys/file.c:53)
-0x0000008004221a47: uninit_destroy (vm/uninit.c:78)
-0x000000800422177e: destroy_fun (vm/vm.c:437)
+0x000000800421ea4d: free_map_release (filesys/free-map.c:42)
+0x000000800421fd7b: inode_close (filesys/inode.c:163)
+0x000000800421eea4: file_close (filesys/file.c:53)
+0x0000008004221a3b: uninit_destroy (vm/uninit.c:78)
+0x0000008004221772: destroy_fun (vm/vm.c:437)
 0x000000800421a490: hash_clear (lib/kernel/hash.c:63)
-0x00000080042217bd: supplemental_page_table_kill (vm/vm.c:464)
+0x00000080042217b1: supplemental_page_table_kill (vm/vm.c:464)
 0x000000800421bc2c: process_cleanup (userprog/process.c:449)
 0x000000800421bbd8: process_exit (userprog/process.c:434)
 0x00000080042076fb: thread_exit (threads/thread.c:620)
