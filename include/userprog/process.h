@@ -18,4 +18,13 @@ struct thread * get_child(int pid);
 // *************************ADDED LINE ENDS HERE************************* //
 static bool install_page (void *upage, void *kpage, bool writable);
 
+/* 준코(05/19) */
+struct container{
+    struct file *file;
+    off_t offset;
+    size_t page_read_bytes;
+};
+
+bool lazy_load_segment(struct page *page, void *aux);
+
 #endif /* userprog/process.h */

@@ -293,13 +293,6 @@ vm_try_handle_fault (struct intr_frame *f UNUSED, void *addr UNUSED,
             return false;
     }
 
-	/* ----------------------------------- project3_Clean up code for testing ----------------------------------- */
-	// 인자로 받은 write가 쓰기가 가능한지, 접근하려는 주소의 페이지가 쓰기가 가능한지 확인
-	// if (write && !page->writable)
-	// 	// 아니라면 false 반환
-	// 	return false;
-	/* ----------------------------------- project3_Clean up code for testing ----------------------------------- */
-
     // 성공한 경우 true 리턴
     return true;
 }

@@ -428,3 +428,59 @@ void close(int fd){
 }
 // *************************ADDED LINE ENDS HERE************************* //
 
+/* 준코(05/19) : mmap 구현 */
+/* 첫번째 조건문 내용 */
+/* addr = 0  이면 실패 */ 
+/* addr가 커널 가상 주소면 실패 */
+/* addr가 page-aligned 아니면 실패 */
+/* 기존 존재하던 페이지와 겹치면 실패 */
+/* offset 위치가 PGSIZE보다 큰 경우 실패 */
+/* 읽으려는 파일의 length == 0 이면 실패  */
+
+/* 두번째 조건문 내용 */
+/* STDIN, STDOUT일때?? */
+/* 파일이 NULL */
+/* fd로 열린 파일 lenghth == 0? 읽으려는 파일과 열린 파일 차이 뭘까?*/ 
+
+
+void *mmap(void *addr, size_t length, int writable, int fd, off_t offset)
+{
+
+	// 1. 파일 내용을 읽는 위치(커서)(offset)가 page-align되어야 함 -> struct file의 pos멤버
+	if (offset % PGSIZE != 0)
+	{
+		return NULL;
+	}
+
+	// 2. 가상 유저 page 시작 주소(addr)가 page-align되어야 함, addr이 유저영역이어야 함, addr이 NULL이 아니어야 함, length가 0보다 커야 함
+	if ((pg_round_down(addr) != addr) || is_kernel_vaddr(addr) || addr == NULL || (long long)length <= 0)
+	{
+		return NULL;
+	}
+
+	// 3. fd가 콘솔 입출력(STDIN/STDOUT)이 아니어야 함
+	if (fd == 0 || fd == 1)
+	{
+		exit(-1);
+	}
+
+	// 4. 매핑하려는 페이지가 이미 spt에 존재하는 페이지이면 안됨
+	if (spt_find_page(&thread_current()->spt, addr))
+	{
+		return NULL;
+	}
+
+	struct file *target = find_file_by_fd(fd);
+
+	if (target == NULL)
+	{
+		return NULL;
+	}
+
+	return do_mmap(addr, length, writable, target, offset);
+}
+
+void munmap(void *addr)
+{
+	do_munmap(addr);
+}

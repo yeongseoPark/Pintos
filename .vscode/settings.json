@@ -13,6 +13,7 @@
         "inttypes.h": "c",
         "thread.h": "c",
         "stdlib.h": "c",
-        "vaddr.h": "c"
+        "vaddr.h": "c",
+        "vm.h": "c"
     }
 }
