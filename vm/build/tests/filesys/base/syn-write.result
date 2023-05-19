@@ -1,6 +1,6 @@
 FAIL
 Kernel panic in run: PANIC at ../../threads/thread.c:598 in thread_current(): assertion `is_thread (t)' failed.
-Call stack: 0x8004217ec2 0x8004207635 0x800420a771 0x800421b1c7 0x800421b394 0x800421b378 0x800421540e 0x800421b227 0x80042153c5 0x800421d2dd 0x800421ccbf 0x8004208fca 0x80042093e8 0x800421877d 0x800420bcec 0x800420bd8b 0x800421f2a8 0x800421f327 0x800421df03 0x800421bfac 0x800421b9fe 0x800421d460 0x800421cedf 0x800421cd39
+Call stack: 0x8004217ec2 0x8004207635 0x800420a771 0x800421b1c7 0x800421b394 0x800421b378 0x80042163c1 0x8004215af9 0x800421b227 0x80042153c5 0x800421d2dd 0x800421ccbf 0x8004208fca 0x80042093e8 0x800421877d 0x800420bcec 0x800420bd8b 0x800421f2a8 0x800421f327 0x800421df03 0x800421bfac 0x800421b9fe 0x800421d460 0x800421cedf 0x800421cd39
 Translation of call stack:
 0x0000008004217ec2: debug_panic (lib/kernel/debug.c:32)
 0x0000008004207635: thread_current (threads/thread.c:599)
@@ -8,7 +8,8 @@ Translation of call stack:
 0x000000800421b1c7: console_locked_by_current_thread (lib/kernel/console.c:111 (discriminator 2))
 0x000000800421b394: putchar_have_lock (lib/kernel/console.c:173)
 0x000000800421b378: vprintf_helper (lib/kernel/console.c:166)
-0x000000800421540e: __vprintf (lib/stdio.c:154)
+0x00000080042163c1: format_string (lib/stdio.c:529 (discriminator 3))
+0x0000008004215af9: __vprintf (lib/stdio.c:284)
 0x000000800421b227: vprintf (lib/kernel/console.c:123)
 0x00000080042153c5: printf (lib/stdio.c:80)
 0x000000800421d2dd: exit (userprog/syscall.c:228)

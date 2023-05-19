@@ -2,6 +2,7 @@
 
 #include "vm/vm.h"
 
+
 static bool file_backed_swap_in (struct page *page, void *kva);
 static bool file_backed_swap_out (struct page *page);
 static void file_backed_destroy (struct page *page);
@@ -85,6 +86,8 @@ fd로 열린 파일의 오프셋 바이트부터 시작해서 length 바이트�
 void *
 do_mmap (void *addr, size_t length, int writable,
 		struct file *file, off_t offset) {
+	struct thread *cur_thread = thread_current();
+
 	file = file_reopen(file); // file_reopen : 인자로 받은 파일과 동일한 inode에 대한 새 파일을 연다
 	
 	// 읽으려는 바이트
@@ -94,33 +97,29 @@ do_mmap (void *addr, size_t length, int writable,
 	size_t zero_bytes = PGSIZE - (read_bytes % PGSIZE); 
 
 	void* addr_middleman = addr;
-	int read_count; // file_read의 반환값 받기 위해 존재
 
-	while (read_bytes > 0) {
+	while (read_bytes > 0 || zero_bytes > 0) {
+		
 		struct info_aux *if_aux = (struct info_aux*)calloc(1, sizeof(struct info_aux));
 
-		size_t copy_bytes = read_bytes < PGSIZE ? read_bytes : PGSIZE;
+		size_t copy_bytes      = read_bytes < PGSIZE ? read_bytes : PGSIZE;
+		size_t page_zero_bytes = PGSIZE - read_bytes;
 
-		if_aux->file = file;
-		if_aux->offset = offset;
-		if_aux->read_bytes = copy_bytes;
-		if_aux->zero_bytes = PGSIZE - (read_bytes % PGSIZE); 
+		if_aux->file 	   = file;
+		if_aux->offset 	   = offset;
+		if_aux->read_bytes = read_bytes;
+		if_aux->zero_bytes = zero_bytes; 
 
 		// 페이지 만들고 
-		vm_alloc_page_with_initializer(VM_FILE, addr_middleman, 1, lazy_load_segment_file, if_aux);
-		struct page *cur_page = spt_find_page(&thread_current()->spt, addr_middleman);
-
-		// 얘네 기록을 initializer에서 해줄라고 보니, 받을 수 있는 인자가 page랑 kva밖에 없어서 여기서 넣어줌.
-		// 근데 이래도 되는진 모르겠음...
-		cur_page->file.mapped_file = file; 
-		cur_page->file.offset	   = offset;
-		cur_page->file.read_bytes = copy_bytes;
-		cur_page->file.zero_bytes = PGSIZE - (read_bytes % PGSIZE);
+		if (!vm_alloc_page_with_initializer(VM_FILE, addr_middleman, writable, lazy_load_segment_file, if_aux)) {
+			free(addr);
+			return false;
+		}
 
 		read_bytes -= copy_bytes;
+		zero_bytes -= page_zero_bytes;
 		offset 	   += copy_bytes;
-
-		addr_middleman -= copy_bytes;
+		addr_middleman += PGSIZE;
 	}
 
 	return addr; // 성공적이면 파일이 매핑된 부분의 가상주소를 리턴

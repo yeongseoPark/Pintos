@@ -24,8 +24,8 @@ Differences in `diff -u' format:
   (mmap-off) open "large.txt"
   (mmap-off) try to mmap with offset 0x1000
   (mmap-off) validate mmap.
-- (mmap-off) validated.
-- (mmap-off) write to mmap
+  (mmap-off) validated.
+  (mmap-off) write to mmap
 - (mmap-off) validate contents.
 - (mmap-off) open "large.txt"
 - (mmap-off) read "large.txt" Page 0

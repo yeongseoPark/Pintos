@@ -1,15 +1,14 @@
 FAIL
-Test output failed to match any acceptable form.
-
-Acceptable output:
-  (swap-file) begin
-  (swap-file) open "large.txt"
-  (swap-file) mmap "large.txt"
-  (swap-file) end
-Differences in `diff -u' format:
-  (swap-file) begin
-  (swap-file) open "large.txt"
-  (swap-file) mmap "large.txt"
-- (swap-file) end
-
-(Process exit codes are excluded for matching purposes.)
+Kernel panic in run: PANIC at ../../vm/uninit.c:30 in uninit_new(): assertion `page != NULL' failed.
+Call stack: 0x8004217ec2 0x8004221919 0x8004220e57 0x8004221d86 0x800421daa5 0x800421d0e9 0x800421cd39 0x400197 0x400d85 0x400dce
+Translation of call stack:
+0x0000008004217ec2: debug_panic (lib/kernel/debug.c:32)
+0x0000008004221919: uninit_new (vm/uninit.c:32)
+0x0000008004220e57: vm_alloc_page_with_initializer (vm/vm.c:92)
+0x0000008004221d86: do_mmap (vm/file.c:114)
+0x000000800421daa5: mmap (userprog/syscall.c:478)
+0x000000800421d0e9: syscall_handler (userprog/syscall.c:158)
+0x000000800421cd39: no_sti (userprog/syscall-entry.o:?)
+0x0000000000400197: (unknown)
+0x0000000000400d85: (unknown)
+0x0000000000400dce: (unknown)

@@ -4,7 +4,7 @@ Kernel command line: -q -f put mmap-read put sample.txt run mmap-read
 Pintos booting with: 
 	base_mem: 0x0 ~ 0x9fc00 (Usable: 639 kB)
 	ext_mem: 0x100000 ~ 0x13e0000 (Usable: 19,328 kB)
-Calibrating timer...  255,180,800 loops/s.
+Calibrating timer...  261,734,400 loops/s.
 hd0:0: detected 329 sector (164 kB) disk, model "QEMU HARDDISK", serial "QM00001"
 hd0:1: detected 20,160 sector (9 MB) disk, model "QEMU HARDDISK", serial "QM00002"
 hd1:0: detected 109 sector (54 kB) disk, model "QEMU HARDDISK", serial "QM00003"
@@ -19,10 +19,10 @@ Executing 'mmap-read':
 (mmap-read) mmap "sample.txt"
 mmap-read: exit(-1)
 Execution of 'mmap-read' complete.
-Timer: 67 ticks
-Thread: 35 idle ticks, 31 kernel ticks, 1 user ticks
+Timer: 65 ticks
+Thread: 35 idle ticks, 29 kernel ticks, 1 user ticks
 hd0:0: 0 reads, 0 writes
-hd0:1: 121 reads, 256 writes
+hd0:1: 123 reads, 256 writes
 hd1:0: 109 reads, 0 writes
 hd1:1: 0 reads, 0 writes
 Console: 1053 characters output
