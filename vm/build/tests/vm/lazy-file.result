@@ -1,11 +1,11 @@
 FAIL
 Kernel panic in run: PANIC at ../../vm/uninit.c:30 in uninit_new(): assertion `page != NULL' failed.
-Call stack: 0x8004217ec2 0x8004221919 0x8004220e57 0x8004221d86 0x800421daa5 0x800421d0e9 0x800421cd39 0x400250 0x400f9f 0x400fe8
+Call stack: 0x8004217ec2 0x8004221919 0x8004220e57 0x8004221d73 0x800421daa5 0x800421d0e9 0x800421cd39 0x400250 0x400f9f 0x400fe8
 Translation of call stack:
 0x0000008004217ec2: debug_panic (lib/kernel/debug.c:32)
 0x0000008004221919: uninit_new (vm/uninit.c:32)
 0x0000008004220e57: vm_alloc_page_with_initializer (vm/vm.c:92)
-0x0000008004221d86: do_mmap (vm/file.c:114)
+0x0000008004221d73: do_mmap (vm/file.c:114)
 0x000000800421daa5: mmap (userprog/syscall.c:478)
 0x000000800421d0e9: syscall_handler (userprog/syscall.c:158)
 0x000000800421cd39: no_sti (userprog/syscall-entry.o:?)

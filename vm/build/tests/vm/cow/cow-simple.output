@@ -4,7 +4,7 @@ Kernel command line: -q -f put cow-simple run cow-simple
 Pintos booting with: 
 	base_mem: 0x0 ~ 0x9fc00 (Usable: 639 kB)
 	ext_mem: 0x100000 ~ 0x13e0000 (Usable: 19,328 kB)
-Calibrating timer...  232,652,800 loops/s.
+Calibrating timer...  155,443,200 loops/s.
 hd0:0: detected 329 sector (164 kB) disk, model "QEMU HARDDISK", serial "QM00001"
 hd0:1: detected 20,160 sector (9 MB) disk, model "QEMU HARDDISK", serial "QM00002"
 hd1:0: detected 4,019 sector (1 MB) disk, model "QEMU HARDDISK", serial "QM00003"
@@ -23,16 +23,14 @@ child: exit(1)
 (cow-simple) check data consistency
 (cow-simple) end
 cow-simple: exit(0)
-Kernel PANIC at ../../lib/kernel/bitmap.c:234 in bitmap_contains(): assertion `start <= b->bit_cnt' failed.
-Call stack: 0x8004217ec2 0x8004219ec4 0x800421a018 0x800421ea4d 0x800421fd7b 0x800421eea4 0x8004221a3b 0x8004221772 0x800421a490 0x80042217b1 0x800421bc2c 0x800421bbd8 0x80042076fb 0x800421d2e9 0x800421ce97 0x800421cd39 0x40066d 0x400291 0x400ef2 0x400f3b.
-The `backtrace' program can make call stacks useful.
-Read "Backtraces" in the "Debugging Tools" chapter
-of the Pintos documentation for more information.
-Timer: 369 ticks
-Thread: 284 idle ticks, 80 kernel ticks, 5 user ticks
+Execution of 'cow-simple' complete.
+Timer: 316 ticks
+Thread: 220 idle ticks, 91 kernel ticks, 5 user ticks
 hd0:0: 0 reads, 0 writes
 hd0:1: 90 reads, 8066 writes
 hd1:0: 4019 reads, 0 writes
 hd1:1: 0 reads, 0 writes
-Console: 1718 characters output
-Key
+Console: 1235 characters output
+Keyboard: 0 keys pressed
+Exception: 0 page faults
+Powering off...

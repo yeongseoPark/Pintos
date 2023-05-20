@@ -74,5 +74,7 @@ uninit_destroy (struct page *page) {
 	/* TODO: Fill this function.
 	 * TODO: If you don't have anything to do, just return. */
 	struct info_aux *aux = (struct info_aux*)(uninit->aux);
-	file_close(&aux->file);
+
+	/* fork-read 터짐포인트 - 열지도 않았는데 어케닫음 */
+	// file_close(&aux->file);
 }
