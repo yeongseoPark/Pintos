@@ -1,14 +1,15 @@
 FAIL
-Kernel panic in run: PANIC at ../../vm/uninit.c:30 in uninit_new(): assertion `page != NULL' failed.
-Call stack: 0x8004217ec2 0x80042219d2 0x8004220ef4 0x8004221e2c 0x800421db42 0x800421d186 0x800421cdd6 0x400197 0x400d85 0x400dce
-Translation of call stack:
-0x0000008004217ec2: debug_panic (lib/kernel/debug.c:32)
-0x00000080042219d2: uninit_new (vm/uninit.c:32)
-0x0000008004220ef4: vm_alloc_page_with_initializer (vm/vm.c:92)
-0x0000008004221e2c: do_mmap (vm/file.c:114)
-0x000000800421db42: mmap (userprog/syscall.c:478)
-0x000000800421d186: syscall_handler (userprog/syscall.c:158)
-0x000000800421cdd6: no_sti (userprog/syscall-entry.o:?)
-0x0000000000400197: (unknown)
-0x0000000000400d85: (unknown)
-0x0000000000400dce: (unknown)
+Test output failed to match any acceptable form.
+
+Acceptable output:
+  (swap-file) begin
+  (swap-file) open "large.txt"
+  (swap-file) mmap "large.txt"
+  (swap-file) end
+Differences in `diff -u' format:
+  (swap-file) begin
+  (swap-file) open "large.txt"
+  (swap-file) mmap "large.txt"
+- (swap-file) end
+
+(Process exit codes are excluded for matching purposes.)

@@ -103,7 +103,7 @@ do_mmap (void *addr, size_t length, int writable,
 		struct info_aux *if_aux = (struct info_aux*)calloc(1, sizeof(struct info_aux));
 
 		size_t copy_bytes      = read_bytes < PGSIZE ? read_bytes : PGSIZE;
-		size_t page_zero_bytes = PGSIZE - read_bytes;
+		size_t page_zero_bytes = PGSIZE - copy_bytes;
 
 		if_aux->file 	   = file;
 		if_aux->offset 	   = offset;

@@ -25,7 +25,7 @@ Executing 'priority-donate-nest':
 (priority-donate-nest) end
 Execution of 'priority-donate-nest' complete.
 Timer: 55 ticks
-Thread: 31 idle ticks, 24 kernel ticks, 0 user ticks
+Thread: 30 idle ticks, 25 kernel ticks, 0 user ticks
 hd0:0: 0 reads, 0 writes
 hd0:1: 9 reads, 18 writes
 hd1:1: 0 reads, 0 writes

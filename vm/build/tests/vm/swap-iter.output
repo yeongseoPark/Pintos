@@ -4,7 +4,7 @@ Kernel command line: -q -f put swap-iter put large.txt run swap-iter
 Pintos booting with: 
 	base_mem: 0x0 ~ 0x9fc00 (Usable: 639 kB)
 	ext_mem: 0x100000 ~ 0x9e0000 (Usable: 9,088 kB)
-Calibrating timer...  104,755,200 loops/s.
+Calibrating timer...  261,734,400 loops/s.
 hd0:0: detected 329 sector (164 kB) disk, model "QEMU HARDDISK", serial "QM00001"
 hd0:1: detected 20,160 sector (9 MB) disk, model "QEMU HARDDISK", serial "QM00002"
 hd1:0: detected 7,932 sector (3 MB) disk, model "QEMU HARDDISK", serial "QM00003"
@@ -23,8 +23,8 @@ Call stack: 0x8004217ec2 0x8004221199 0x80042214c1 0x80042213ce 0x800421cd47 0x8
 The `backtrace' program can make call stacks useful.
 Read "Backtraces" in the "Debugging Tools" chapter
 of the Pintos documentation for more information.
-Timer: 638 ticks
-Thread: 417 idle ticks, 178 kernel ticks, 43 user ticks
+Timer: 413 ticks
+Thread: 280 idle ticks, 109 kernel ticks, 24 user ticks
 hd0:0: 0 reads, 0 writes
 hd0:1: 116 reads, 15902 writes
 hd1:0: 7932 reads, 0 writes
