@@ -422,6 +422,22 @@ void process_exit (void) {
     palloc_free_multiple(curr->fd_table, FDT_PAGES);
     file_close(curr->running);
 
+	struct supplemental_page_table *spt = &curr->spt;
+	if (!hash_empty(&spt->spt_hash)) {
+		struct hash_iterator i;
+
+		hash_first(&i, &spt->spt_hash);
+
+		while(hash_next(&i)) {
+			struct page *page = hash_entry(hash_cur(&i), struct page, hash_elem);
+
+			if (page->operations->type == VM_FILE) {
+				do_munmap(page->va);
+			}
+		}
+	}
+	
+
     sema_up(&curr->wait_sema); // 부모를 깨운다
     sema_down(&curr->free_sema); 
 	/*	부모가 process_wait의 해당코드를 실행해서 자식을 자식 리스트에서 지우는동안, 잠깐 기다리기 위해서 free sema를 down시켜서 현재 스레드는 잔다

@@ -4,7 +4,7 @@ Kernel command line: -q -f put swap-file put large.txt run swap-file
 Pintos booting with: 
 	base_mem: 0x0 ~ 0x9fc00 (Usable: 639 kB)
 	ext_mem: 0x100000 ~ 0x7e0000 (Usable: 7,040 kB)
-Calibrating timer...  209,715,200 loops/s.
+Calibrating timer...  235,520,000 loops/s.
 hd0:0: detected 329 sector (164 kB) disk, model "QEMU HARDDISK", serial "QM00001"
 hd0:1: detected 20,160 sector (9 MB) disk, model "QEMU HARDDISK", serial "QM00002"
 hd1:0: detected 7,931 sector (3 MB) disk, model "QEMU HARDDISK", serial "QM00003"
@@ -18,12 +18,12 @@ Executing 'swap-file':
 (swap-file) open "large.txt"
 (swap-file) mmap "large.txt"
 Kernel PANIC at ../../vm/uninit.c:30 in uninit_new(): assertion `page != NULL' failed.
-Call stack: 0x8004217ec2 0x8004221919 0x8004220e57 0x8004221d73 0x800421daa5 0x800421d0e9 0x800421cd39 0x400197 0x400d85 0x400dce.
+Call stack: 0x8004217ec2 0x80042219b6 0x8004220ef4 0x8004221e10 0x800421db42 0x800421d186 0x800421cdd6 0x400197 0x400d85 0x400dce.
 The `backtrace' program can make call stacks useful.
 Read "Backtraces" in the "Debugging Tools" chapter
 of the Pintos documentation for more information.
-Timer: 561 ticks
-Thread: 372 idle ticks, 171 kernel ticks, 18 user ticks
+Timer: 382 ticks
+Thread: 259 idle ticks, 108 kernel ticks, 15 user ticks
 hd0:0: 0 reads, 0 writes
 hd0:1: 120 reads, 15900 writes
 hd1:0: 7931 reads, 0 writes
