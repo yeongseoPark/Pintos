@@ -66,7 +66,7 @@ pass tests/vm/pt-grow-bad
 pass tests/vm/pt-big-stk-obj
 pass tests/vm/pt-bad-addr
 pass tests/vm/pt-bad-read
-FAIL tests/vm/pt-write-code
+pass tests/vm/pt-write-code
 FAIL tests/vm/pt-write-code2
 pass tests/vm/pt-grow-stk-sc
 pass tests/vm/page-linear
@@ -82,7 +82,7 @@ pass tests/vm/mmap-unmap
 pass tests/vm/mmap-overlap
 pass tests/vm/mmap-twice
 pass tests/vm/mmap-write
-FAIL tests/vm/mmap-ro
+pass tests/vm/mmap-ro
 pass tests/vm/mmap-exit
 pass tests/vm/mmap-shuffle
 pass tests/vm/mmap-bad-fd

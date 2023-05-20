@@ -28,13 +28,13 @@ Executing 'page-shuffle':
 (page-shuffle) end
 page-shuffle: exit(0)
 Execution of 'page-shuffle' complete.
-Timer: 145 ticks
-Thread: 37 idle ticks, 24 kernel ticks, 84 user ticks
+Timer: 164 ticks
+Thread: 36 idle ticks, 25 kernel ticks, 103 user ticks
 hd0:0: 0 reads, 0 writes
 hd0:1: 86 reads, 254 writes
 hd1:0: 113 reads, 0 writes
 hd1:1: 0 reads, 0 writes
-Console: 1438 characters output
+Console: 1439 characters output
 Keyboard: 0 keys pressed
 Exception: 0 page faults
 Powering off...

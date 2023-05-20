@@ -4,7 +4,7 @@ Kernel command line: -q -f put lazy-file put sample.txt put small.txt run lazy-f
 Pintos booting with: 
 	base_mem: 0x0 ~ 0x9fc00 (Usable: 639 kB)
 	ext_mem: 0x100000 ~ 0x13e0000 (Usable: 19,328 kB)
-Calibrating timer...  314,163,200 loops/s.
+Calibrating timer...  209,510,400 loops/s.
 hd0:0: detected 329 sector (164 kB) disk, model "QEMU HARDDISK", serial "QM00001"
 hd0:1: detected 20,160 sector (9 MB) disk, model "QEMU HARDDISK", serial "QM00002"
 hd1:0: detected 151 sector (75 kB) disk, model "QEMU HARDDISK", serial "QM00003"
@@ -21,15 +21,15 @@ Executing 'lazy-file':
 (lazy-file) page aligned size of small: 12288
 (lazy-file) mmap "small.txt"
 Kernel PANIC at ../../vm/uninit.c:30 in uninit_new(): assertion `page != NULL' failed.
-Call stack: 0x8004217ec2 0x80042219b6 0x8004220ef4 0x8004221e10 0x800421db42 0x800421d186 0x800421cdd6 0x400250 0x400f9f 0x400fe8.
+Call stack: 0x8004217ec2 0x80042219d2 0x8004220ef4 0x8004221e2c 0x800421db42 0x800421d186 0x800421cdd6 0x400250 0x400f9f 0x400fe8.
 The `backtrace' program can make call stacks useful.
 Read "Backtraces" in the "Debugging Tools" chapter
 of the Pintos documentation for more information.
-Timer: 134 ticks
-Thread: 40 idle ticks, 26 kernel ticks, 68 user ticks
+Timer: 181 ticks
+Thread: 40 idle ticks, 28 kernel ticks, 113 user ticks
 hd0:0: 0 reads, 0 writes
 hd0:1: 147 reads, 350 writes
 hd1:0: 151 reads, 0 writes
 hd1:1: 0 reads, 0 writes
-Console: 1506 characters output
+Console: 1507 characters output
 Key

@@ -299,12 +299,12 @@ vm_try_handle_fault (struct intr_frame *f UNUSED, void *addr UNUSED,
             return false;
     }
 
-	/* ----------------------------------- project3_Clean up code for testing ----------------------------------- */
+	/* ----------------------------------- mmap-ro 테스트 ----------------------------------- */
 	// 인자로 받은 write가 쓰기가 가능한지, 접근하려는 주소의 페이지가 쓰기가 가능한지 확인
-	// if (write && !page->writable)
-	// 	// 아니라면 false 반환
-	// 	return false;
-	/* ----------------------------------- project3_Clean up code for testing ----------------------------------- */
+	if (write && !page->writable)
+		// 아니라면 false 반환
+		return false;
+	/* ----------------------------------- mmap-ro 테스트 ----------------------------------- */
 
     // 성공한 경우 true 리턴
     return true;
@@ -444,22 +444,7 @@ void
 supplemental_page_table_kill (struct supplemental_page_table *spt UNUSED) {
 	/* TODO: Destroy all the supplemental_page_table hold by thread and
 	 * TODO: writeback all the modified contents to the storage. */
-	// struct hash_iterator i;
 
-	// hash_first(&i, &spt->spt_hash);
-
-	// while(hash_next(&i)) {
-	// 	struct page *page = hash_entry(hash_cur(&i), struct page, hash_elem);
-
-	// 	if (page->operations->type == VM_FILE) {
-	// 		do_munmap(page->va);
-	// 	}
-	// }
-
-	// /* destroy_fun을 해시테이블의 모든 element에 적용 */
-	// hash_destroy(&spt->spt_hash, destroy_fun);
-
-	// free(&spt->spt_hash.aux);
 	hash_clear(&spt->spt_hash, destroy_fun);
 }
 
