@@ -365,7 +365,27 @@ int filesize(int fd){
 - 파일 디스크립터가 0이 아닐 경우 파일의 데이터를 크기만큼 저장 후 읽은 바이트 수를 리턴*/
 int read(int fd, void *buffer, unsigned size){
     check_address(buffer);
-    // check_address(buffer+size-1);
+    check_address(buffer+size-1); 
+
+    void *addr = buffer; // 권한 확인용
+    addr = pg_round_down(addr);
+    // pt-write-code2 : 위에서는 주소의 위치(유저영역)과, 연결된 테이블이 있는가. 까지만 확인해주는데,
+    // pt-write-code2 : buffer에 대한 쓰기권한까지 확인해줘야 함 
+    while (true) {
+        if (addr >= buffer + size) {
+            break; 
+        }
+
+        struct page * pg = spt_find_page(&thread_current()->spt, addr);
+
+        if (!pg->writable) {
+            exit(-1);
+        }
+
+        addr += PGSIZE;
+    }
+
+
     int read_count; // 글자수 카운트 용(for문 사용하기 위해)
 
     struct file *file_obj = find_file_by_fd(fd);

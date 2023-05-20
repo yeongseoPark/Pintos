@@ -67,7 +67,7 @@ pass tests/vm/pt-big-stk-obj
 pass tests/vm/pt-bad-addr
 pass tests/vm/pt-bad-read
 pass tests/vm/pt-write-code
-FAIL tests/vm/pt-write-code2
+pass tests/vm/pt-write-code2
 pass tests/vm/pt-grow-stk-sc
 pass tests/vm/page-linear
 pass tests/vm/page-parallel
@@ -138,4 +138,3 @@ pass tests/threads/priority-preempt
 pass tests/threads/priority-sema
 pass tests/threads/priority-condvar
 pass tests/threads/priority-donate-chain
-FAIL tests/vm/cow/cow-simple
