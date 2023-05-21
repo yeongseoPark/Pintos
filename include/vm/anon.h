@@ -7,6 +7,7 @@ enum vm_type;
 struct anon_page {
     /* 필요한 정보나 상태를 저장하기 위한 멤버 추가 필요 */
     struct page *anon_p;
+    int swap_index;
 };
 
 void vm_anon_init (void);

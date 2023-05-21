@@ -25,9 +25,11 @@ test_main (void)
     CHECK ((map = mmap (actual, sizeof(large), 0, handle, 0)) != MAP_FAILED, "mmap \"large.txt\"");
 
     /* Check that data is correct. */
-    if (memcmp (actual, large, strlen (large)))
+    if (memcmp (actual, large, strlen (large))) 
         fail ("read of mmap'd file reported bad data");
-
+    // 이 밑으로 못넘어감
+    // 근데 memcmp함수 안에서는 끝까지 넘어감
+    
     /* Verify that data is followed by zeros. */
     size_t len = strlen(large);
     size_t page_end;

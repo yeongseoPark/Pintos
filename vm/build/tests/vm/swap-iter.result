@@ -1,13 +1,55 @@
 FAIL
-Kernel panic in run: PANIC at ../../vm/vm.c:229 in vm_get_frame(): todo
-Call stack: 0x8004217ec2 0x8004221234 0x800422155c 0x8004221469 0x800421cd47 0x8004208fca 0x80042093e8 0x400e2e 0x400e77
-Translation of call stack:
-0x0000008004217ec2: debug_panic (lib/kernel/debug.c:32)
-0x0000008004221234: vm_get_frame (vm/vm.c:235)
-0x000000800422155c: vm_do_claim_page (vm/vm.c:342)
-0x0000008004221469: vm_try_handle_fault (vm/vm.c:297)
-0x000000800421cd47: page_fault (userprog/exception.c:149)
-0x0000008004208fca: intr_handler (threads/interrupt.c:352)
-0x00000080042093e8: intr_entry (threads/intr-stubs.o:?)
-0x0000000000400e2e: (unknown)
-0x0000000000400e77: (unknown)
+Test output failed to match any acceptable form.
+
+Acceptable output:
+  (swap-iter) begin
+  (swap-iter) write sparsely over page 0
+  (swap-iter) write sparsely over page 512
+  (swap-iter) write sparsely over page 1024
+  (swap-iter) write sparsely over page 1536
+  (swap-iter) write sparsely over page 2048
+  (swap-iter) write sparsely over page 2560
+  (swap-iter) write sparsely over page 3072
+  (swap-iter) write sparsely over page 3584
+  (swap-iter) write sparsely over page 4096
+  (swap-iter) write sparsely over page 4608
+  (swap-iter) open "large.txt"
+  (swap-iter) mmap "large.txt"
+  (swap-iter) check consistency in page 0
+  (swap-iter) check consistency in page 512
+  (swap-iter) check consistency in page 1024
+  (swap-iter) check consistency in page 1536
+  (swap-iter) check consistency in page 2048
+  (swap-iter) check consistency in page 2560
+  (swap-iter) check consistency in page 3072
+  (swap-iter) check consistency in page 3584
+  (swap-iter) check consistency in page 4096
+  (swap-iter) check consistency in page 4608
+  (swap-iter) end
+Differences in `diff -u' format:
+  (swap-iter) begin
+  (swap-iter) write sparsely over page 0
+  (swap-iter) write sparsely over page 512
+  (swap-iter) write sparsely over page 1024
+- (swap-iter) write sparsely over page 1536
+- (swap-iter) write sparsely over page 2048
+- (swap-iter) write sparsely over page 2560
+- (swap-iter) write sparsely over page 3072
+- (swap-iter) write sparsely over page 3584
+- (swap-iter) write sparsely over page 4096
+- (swap-iter) write sparsely over page 4608
+- (swap-iter) open "large.txt"
+- (swap-iter) mmap "large.txt"
+- (swap-iter) check consistency in page 0
+- (swap-iter) check consistency in page 512
+- (swap-iter) check consistency in page 1024
+- (swap-iter) check consistency in page 1536
+- (swap-iter) check consistency in page 2048
+- (swap-iter) check consistency in page 2560
+- (swap-iter) check consistency in page 3072
+- (swap-iter) check consistency in page 3584
+- (swap-iter) check consistency in page 4096
+- (swap-iter) check consistency in page 4608
+- (swap-iter) end
+
+(Process exit codes are excluded for matching purposes.)

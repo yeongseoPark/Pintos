@@ -168,28 +168,28 @@ spt_remove_page (struct supplemental_page_table *spt, struct page *page) {
 /* Get the struct frame, that will be evicted. */
 static struct frame *
 vm_get_victim (void) {
-	// struct frame *victim = NULL;
-	//     /* TODO: The policy for eviction is up to you. */
-    // struct thread *curr = thread_current();
-    // struct list_elem *e = start;
+	struct frame *victim = NULL;
+	    /* TODO: The policy for eviction is up to you. */
+    struct thread *curr = thread_current();
+    struct list_elem *e = start;
 
-    // for (start = e; start != list_end(&frame_table); start = list_next(start)) {
-    //     victim = list_entry(start, struct frame, frame_elem);
-    //     if (pml4_is_accessed(curr->pml4, victim->page->va))
-    //         pml4_set_accessed (curr->pml4, victim->page->va, 0);
-    //     else
-    //         return victim;
-    // }
+    for (start = e; start != list_end(&frame_table); start = list_next(start)) {
+        victim = list_entry(start, struct frame, frame_elem);
+        if (pml4_is_accessed(curr->pml4, victim->page->va))
+            pml4_set_accessed (curr->pml4, victim->page->va, 0);
+        else
+            return victim;
+    }
 
-    // for (start = list_begin(&frame_table); start != e; start = list_next(start)) {
-    //     victim = list_entry(start, struct frame, frame_elem);
-    //     if (pml4_is_accessed(curr->pml4, victim->page->va))
-    //         pml4_set_accessed (curr->pml4, victim->page->va, 0);
-    //     else
-    //         return victim;
-    // }
+    for (start = list_begin(&frame_table); start != e; start = list_next(start)) {
+        victim = list_entry(start, struct frame, frame_elem);
+        if (pml4_is_accessed(curr->pml4, victim->page->va))
+            pml4_set_accessed (curr->pml4, victim->page->va, 0);
+        else
+            return victim;
+    }
 
-	// return victim;
+	return victim;
 }
 
 /* Evict one page and return the corresponding frame.
@@ -198,7 +198,7 @@ static struct frame *
 vm_evict_frame (void) {
 	struct frame *victim UNUSED = vm_get_victim ();
 	/* TODO: swap out the victim and return the evicted frame. */
-	// swap_out(victim->page);
+	swap_out(victim->page);
 
 	return NULL;
 }
@@ -226,10 +226,10 @@ vm_get_frame (void) {
 	// 아니면 그냥 물리프레임에 USER_POOL임을 표시만??
 	// -> 메모리의 공간이 유저풀과 커널풀로 반반씩 나눠져있는게 맞음(pool 구조체의 주석에 써있음)
 	if (frame->kva == NULL) {
-		PANIC("todo");
-		// frame = vm_evict_frame();		// RAM user pool이 없으면 frame에서 evict, 새로 할당
-		// frame->page = NULL;
-		// return frame;
+		// PANIC("todo");
+		frame = vm_evict_frame();		// RAM user pool이 없으면 frame에서 evict, 새로 할당
+		frame->page = NULL;
+		return frame;
 	}
 
 	list_push_back(&frame_table, &frame->frame_elem);

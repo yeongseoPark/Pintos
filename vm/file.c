@@ -36,12 +36,48 @@ file_backed_initializer (struct page *page, enum vm_type type, void *kva) {
 static bool
 file_backed_swap_in (struct page *page, void *kva) {
 	struct file_page *file_page UNUSED = &page->file;
+
+	// 페이지 예외처리
+	if (page == NULL) {
+		return false;
+	}
+
+	// aux로부터 파일, 오프셋, read_byte, zero_byte 읽어옴
+	struct info_aux *aux = page->uninit.aux;
+	struct file *file = aux->file;
+	off_t offset = aux->offset;
+	uint32_t read_bytes = aux->read_bytes;
+	uint32_t zero_bytes = aux->zero_bytes;
+
+	// file의 pos값 변경해주고, 파일의 값을 물리프레임에 씀, 이때 읽는 바이트 수 체크해서 예외처리
+	file_seek(file, offset);
+	if (file_read_at(file, page->frame->kva, read_bytes, offset) != read_bytes) {
+		return false;
+	} 
+
+	// zero byte는 0으로 설정
+	memset(kva + read_bytes, 0, zero_bytes);
+
+	return true;
 }
 
 /* Swap out the page by writeback contents to the file. */
 static bool
 file_backed_swap_out (struct page *page) {
 	struct file_page *file_page UNUSED = &page->file;
+
+	if (page == NULL) {
+		return false;
+	}
+
+	struct info_aux *aux = (struct info_aux*)page->uninit.aux;
+
+	if (pml4_is_dirty(thread_current()->pml4, page->va)) {
+		file_write_at(aux->file, page->va, aux->read_bytes, aux->offset);
+		pml4_set_dirty(thread_current()->pml4, page->va, 0);
+	}
+
+	pml4_clear_page(thread_current()->pml4, page->va);
 }
 
 /* Destory the file backed page. PAGE will be freed by the caller. */
