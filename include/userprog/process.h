@@ -5,6 +5,7 @@
 /* 준코(05/13) */
 #include "filesys/file.h"
 
+bool install_page(void *upage, void *kpage, bool writable);
 tid_t process_create_initd(const char *file_name);
 tid_t process_fork(const char *name, struct intr_frame *if_);
 int process_exec(void *f_name);
@@ -18,7 +19,6 @@ void argument_stack(char **argv, int argc, struct intr_frame *if_);
 // Project 2-2-1 : User Programs - System Call - Basics
 struct thread *get_child(int pid);
 // *************************ADDED LINE ENDS HERE************************* //
-static bool install_page(void *upage, void *kpage, bool writable);
 
 /* 준코(05/13) */
 static bool load_segment(struct file *file, off_t ofs, uint8_t *upage,

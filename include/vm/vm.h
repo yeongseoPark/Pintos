@@ -2,9 +2,8 @@
 #define VM_VM_H
 #include <stdbool.h>
 #include "threads/palloc.h"
-#include <hash.h>
-#include "include/threads/vaddr.h"// pg_round_down
-//#include <process.c> // install_page
+#include "lib/kernel/hash.h"
+
 
 enum vm_type
 {
@@ -16,6 +15,7 @@ enum vm_type
 	VM_FILE = 2,
 	/* page that hold the page cache, for project 4 */
 	VM_PAGE_CACHE = 3,
+	VM_STACK = 9,
 
 	/* Bit flags to store state */
 
@@ -38,7 +38,7 @@ enum vm_type
 struct page_operations;
 struct thread;
 /* 준코(05/12) */
-struct hash_elem;
+#define VM_TYPE(type) ((type)& 7)
 /* 끝 */
 
 /* The representation of "page".
@@ -53,7 +53,7 @@ struct page
 
 	/* 준코(05/12) hash_elem으로 바꿈 */
 	struct hash_elem hash_elem;
-	bool writable;
+	bool stack;
 
 	/* Per-type data are binded into the union.
 	 * Each function automatically detects the current union */
@@ -66,6 +66,7 @@ struct page
 		struct page_cache page_cache;
 #endif
 	};
+	bool writable;
 };
 
 /* The representation of "frame" -> physical memory
@@ -88,7 +89,7 @@ struct page_operations
 {
 	bool (*swap_in)(struct page *, void *);
 	bool (*swap_out)(struct page *);
-	void (*destroy)(struct page *); // 페이지가 VM_FILE이라면, file.c의 file_backed_destroy 호출됨
+	void (*destroy)(struct page *); 
 	enum vm_type type;
 };
 
@@ -115,6 +116,7 @@ struct page *spt_find_page(struct supplemental_page_table *spt,
 						   void *va);
 bool spt_insert_page(struct supplemental_page_table *spt, struct page *page);
 void spt_remove_page(struct supplemental_page_table *spt, struct page *page);
+bool spt_delete_page(struct supplemental_page_table *spt, struct page *page);
 
 void vm_init(void);
 bool vm_try_handle_fault(struct intr_frame *f, void *addr, bool user,
@@ -131,7 +133,7 @@ enum vm_type page_get_type(struct page *page);
 /* 보조 함수 추가 */
 unsigned page_hash(const struct hash_elem *p_elem, void *aux UNUSED);
 bool page_less(const struct hash_elem *a, const struct hash_elem *b, void *aux);
-bool page_insert(struct hash *h, struct page *p);
-bool page_delete(struct hash *h, struct page *p);
+
+struct page *page_lookup(const void *address);
 
 #endif /* VM_VM_H */

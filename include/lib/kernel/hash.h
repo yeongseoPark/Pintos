@@ -75,7 +75,6 @@ struct hash_iterator {
 bool hash_init (struct hash *, hash_hash_func *, hash_less_func *, void *aux);
 void hash_clear (struct hash *, hash_action_func *);
 void hash_destroy (struct hash *, hash_action_func *);
-
 /* Search, insertion, deletion. */
 struct hash_elem *hash_insert (struct hash *, struct hash_elem *);
 struct hash_elem *hash_replace (struct hash *, struct hash_elem *);
@@ -96,5 +95,7 @@ bool hash_empty (struct hash *);
 uint64_t hash_bytes (const void *, size_t);
 uint64_t hash_string (const char *);
 uint64_t hash_int (int);
+
+void hash_destructor(struct hash_elem *, void* aux);
 
 #endif /* lib/kernel/hash.h */

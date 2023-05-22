@@ -1,19 +1,22 @@
 #ifndef THREADS_THREAD_H
 #define THREADS_THREAD_H
 
+#define FDT_PAGES 3
+#define MAX_FD_NUM FDT_PAGES * (1 << 9)
+
 #include <debug.h>
 #include <list.h>
 #include <stdint.h>
 #include "threads/interrupt.h"
+#include "threads/synch.h"
 #ifdef VM
 #include "vm/vm.h"
 #endif
 
 // ******************************LINE ADDED****************************** //
 // Project 2-2-2 : User Programs - System Call - File Descriptor
-#include "threads/synch.h"
-#define FDT_PAGES 3
-#define FDCOUNT_LIMIT FDT_PAGES * (1 << 9) // Limiting fd_idx
+
+ // Limiting fd_idx
 // *************************ADDED LINE ENDS HERE************************* //
 
 /* States in a thread's life cycle. */

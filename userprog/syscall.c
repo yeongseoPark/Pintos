@@ -243,7 +243,7 @@ tid_t exec(char *file_name){ // 현재 프로세스를 command line에서 지정
 // ******************************LINE ADDED****************************** //
 // Project 2-2-2 : User Programs - System Call - File Descriptor
 static struct file *find_file_by_fd(int fd) {
-    if (fd < 0 || fd >= FDCOUNT_LIMIT){
+    if (fd < 0 || fd >= MAX_FD_NUM){
         return NULL;
     }
 
@@ -259,13 +259,13 @@ int add_file_to_fdt(struct file *file) {
     struct file **fdt = curr->fd_table;
 
     // Find open spot from the front
-    while (curr->fd_idx < FDCOUNT_LIMIT && fdt[curr->fd_idx])
+    while (curr->fd_idx < MAX_FD_NUM && fdt[curr->fd_idx])
     {
         curr->fd_idx++;
     }
 
     // error - fd table full
-    if (curr->fd_idx >= FDCOUNT_LIMIT)
+    if (curr->fd_idx >= MAX_FD_NUM)
         return -1;
 
     fdt[curr->fd_idx] = file;
@@ -274,7 +274,7 @@ int add_file_to_fdt(struct file *file) {
 
 void remove_file_from_fdt(int fd) {
     struct thread *cur = thread_current();
-    if (fd < 0 || fd >= FDCOUNT_LIMIT){
+    if (fd < 0 || fd >= MAX_FD_NUM){
         return;
     }
     cur->fd_table[fd] = NULL;

@@ -72,7 +72,7 @@ int main (void) {
 	/* Clear BSS and get machine's RAM size. */
     // BSS is the area of memory used to hold static variables which must be initialized to zero.
     // Block Started by Symbol (BSS) : 제로 값으로 초기화된 정적 할당 변수가 포함된 데이터 세그먼트의 일부로 컴파일러나 링커에 의해 사용.
-	// 초기화되지 않은 전역 및 정적 변수들이 zero로 초기화되어야 하는 영역인데, 커널이 해주지 않기에 직접 해줘야함 - memset
+	// 초기화되지 않은 전역 및 5정적 변수들이 zero로 초기화되어야 하는 영역인데, 커널이 해주지 않기에 직접 해줘야함 - memset
 	// BSS의 끝과 시작을 _start_bss와 _end_bss로 기록
 	bss_init ();
 

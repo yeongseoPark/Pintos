@@ -3,6 +3,9 @@
 #include "vm/vm.h"
 #include "devices/disk.h"
 
+size_t swap_size;
+struct bitmap* swap_table;
+
 /* DO NOT MODIFY BELOW LINE */
 static struct disk *swap_disk;
 static bool anon_swap_in (struct page *page, void *kva);
@@ -21,16 +24,21 @@ static const struct page_operations anon_ops = {
 void
 vm_anon_init (void) {
 	/* TODO: Set up the swap_disk. */
-	swap_disk = NULL;
+	swap_disk = disk_get(1,1);
+	swap_size = disk_size(swap_disk)/8;
+	swap_table = bitmap_create(swap_size);
 }
 
 /* Initialize the file mapping */
 bool
 anon_initializer (struct page *page, enum vm_type type, void *kva) {
 	/* Set up the handler */
+	struct uninit_page* uninit_page = &page->uninit;
+	memset(uninit_page, 0, sizeof(struct uninit_page));
 	page->operations = &anon_ops;
 
 	struct anon_page *anon_page = &page->anon;
+	return true;
 }
 
 /* Swap in the page by read contents from the swap disk. */

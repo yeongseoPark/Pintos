@@ -142,17 +142,15 @@ void thread_init(void) {
     // ******************************LINE ADDED****************************** //
     // Project 1-1 : Alarm Clock - Busy Waiting -> Sleep-Awake
     // sleep_list 초기화
+    lock_init(&tid_lock);
+    list_init(&ready_list);
+    list_init(&destruction_req);
     list_init (&sleep_list);
     next_tick_to_awake = INT64_MAX;
     // *************************ADDED LINE ENDS HERE************************* //
 
-    /* Init the global thread context */
-    lock_init(&tid_lock); // allocate_tid가 사용하는 락
-    list_init(&ready_list);
-    list_init(&destruction_req);
-
     /* Set up a thread structure for the running thread. */
-    initial_thread = running_thread (); // rsp를 잡고 페이지의 시작으로 내림해서 현재 스레드를 찾아냄, 그냥 주소를 얻어내는것
+    initial_thread = running_thread(); // rsp를 잡고 페이지의 시작으로 내림해서 현재 스레드를 찾아냄, 그냥 주소를 얻어내는것
     init_thread(initial_thread, "main", PRI_DEFAULT); // "main"이란 이름의 스레드를 실행 
     // 이안에서 main 스레드의 tf->rsp에 커널 스택 포인터를 저장
     initial_thread->status = THREAD_RUNNING;
@@ -377,11 +375,11 @@ void thread_print_stats(void) {
 tid_t thread_create(const char *name, int priority, thread_func *function, void *aux) {
     struct thread *t; // 새로 생성된 스레드
 
-    // ******************************LINE ADDED****************************** //
-    // Project 1-2.1 : Thread - RoundRobin Scheduling -> Priority Scheduling
-    struct thread *now_running = thread_current(); // 지금 돌고 있는 스레드
-    // *************************ADDED LINE ENDS HERE************************* //
-
+    // // ******************************LINE ADDED****************************** //
+    // // Project 1-2.1 : Thread - RoundRobin Scheduling -> Priority Scheduling
+    // struct thread *now_running = thread_current(); // 지금 돌고 있는 스레드
+    // // *************************ADDED LINE ENDS HERE************************* //
+    struct thread *curr = thread_current();
     tid_t tid;
 
     ASSERT(function != NULL);
@@ -411,27 +409,22 @@ tid_t thread_create(const char *name, int priority, thread_func *function, void 
 
     /*struct thread *parent;
     parent = thread_current();*/
-    list_push_back(&now_running->child_list,&t->child_elem); // parent child 리스트에 생성한 child를 담는다
 
     /* project 2 : File Descriptor */
     /*
      * 1) fd 값 초기화(0,1은 표준 입력, 출력) -> fdtable배열로 받았으므로 바로 값 넣어주면된다.
      * 2) File Descriptor 테이블에 메모리 할당
     */
-
+    t ->child_elem;
+    list_push_back(&curr->child_list, &t->child_elem);
     t->fd_table = palloc_get_multiple(PAL_ZERO, FDT_PAGES);
-    if(t->fd_table == NULL)
-        return TID_ERROR;
-
     t->fd_table[0] = 1;
     t->fd_table[1] = 2;
     t->fd_idx = 2; // idx 2로 초기화
 
-    //count 초기화
     t->stdin_count = 1;
     t->stdout_count = 1;
 
-    /* 준코(05/15) */
     supplemental_page_table_init(&t->spt);
 
     // *************************ADDED LINE ENDS HERE************************* //
@@ -446,10 +439,19 @@ tid_t thread_create(const char *name, int priority, thread_func *function, void 
     t->tf.ss = SEL_KDSEG; // ss: 스택 세그먼트
     t->tf.cs = SEL_KCSEG; // cs: code segment
     t->tf.eflags = FLAG_IF;
+    thread_unblock(t);
+    // test_max_priority();
+    
+
+     if (cmp_priority(&t->elem, &curr->elem, 0)) {
+            thread_yield();
+    }
+    return tid;
+}
     // 위의 GDT셀렉터들은 각 세그먼트에 대한 디스크립터
 
     /* Add to run queue. */
-    thread_unblock(t);
+
 
     // ******************************LINE ADDED****************************** //
     // Project 1-2.1 : Thread - RoundRobin Scheduling -> Priority Scheduling
@@ -468,13 +470,9 @@ tid_t thread_create(const char *name, int priority, thread_func *function, void 
     //          -> Reorder the ready_list
     // 생성된 스레드(t), 지금 돌고 있는 스레드(now_running)비교
     // 새로 생성된 스레드가 우선순위 더 높으면 if문 TRUE -> Yield
-    if (cmp_priority(&t->elem, &now_running->elem, 0)) {
-            thread_yield();
-    }
+   
     // *************************ADDED LINE ENDS HERE************************* //
 
-    return tid;
-}
 
 /* Puts the current thread to sleep.  It will not be scheduled
    again until awoken by thread_unblock().
@@ -512,7 +510,7 @@ void thread_unblock(struct thread *t) {
     // Defined @ lib/kernel/list.c
 
     /*list_push_back(&ready_list, &t->elem);*/
-    list_insert_ordered(&ready_list, &t->elem, &cmp_priority, 0);
+    list_insert_ordered(&ready_list, &t->elem, &cmp_priority, NULL);
     // *************************MODDED LINE ENDS HERE************************* //
 
     t->status = THREAD_READY;
@@ -643,13 +641,14 @@ void thread_yield(void) {
     ASSERT(!intr_context());
     // ******************************INTERRUPT DISABLED****************************** //
     old_level = intr_disable();
+
     if (curr != idle_thread){ // Idle Condition Check
 
         // ******************************LINE MODDED****************************** //
         // Project 1-2.1 : Thread - RoundRobin Scheduling -> Priority Scheduling
 
         /*list_push_back(&ready_list, &curr->elem);*/
-        list_insert_ordered(&ready_list, &curr->elem, &cmp_priority, 0);
+        list_insert_ordered(&ready_list, &curr->elem, &cmp_priority, NULL);
 
         // *************************MDDED LINE ENDS HERE************************* //
     }
@@ -771,9 +770,8 @@ static void init_thread(struct thread *t, const char *name, int priority) {
     // Project 1-2.3 : Priority Inversion Problem - Priority Donation
     // Thread Struct has been MODDED for Priority Donation. Therefore inirialization have to modded as well
     t -> init_priority = priority; // 처음 할당받은 Priority를 담아둔다
-    list_init(&t->donations);
     t -> wait_on_lock = NULL; // 처음 스레드 init 되었을때는 아직 어떤 LOCK 을 대기할지 모름
-
+    list_init(&t->donations);
 
     // ******************************LINE ADDED****************************** //
     // Project 2-2-1: User Programs - System Call - Basics
@@ -782,7 +780,7 @@ static void init_thread(struct thread *t, const char *name, int priority) {
     sema_init(&t->fork_sema, 0);
     sema_init(&t->free_sema, 0);
     t->running = NULL;
-    t->exit_status = 0; // 스레드 시작시 상태 플래그 0으로 초기화
+    t->exit_status = 0;
     // *************************ADDED LINE ENDS HERE************************* //
 }
 
