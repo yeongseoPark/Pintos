@@ -16,7 +16,7 @@ bool page_insert(struct hash *h, struct page *p);
 bool page_delete(struct hash *h, struct page *p);
 
 struct list frame_table; /* frame entry 연결리스트로 구성 */
-static struct list_elem *start = NULL;	/* frame_table을 순회하기 위한 첫 번째 원소*/
+static struct list_elem *start;	/* frame_table을 순회하기 위한 첫 번째 원소*/
 
 
 /* Initializes the virtual memory subsystem by invoking each subsystem's
@@ -65,13 +65,12 @@ vm_alloc_page_with_initializer (enum vm_type type, void *upage, bool writable,
 
 	struct supplemental_page_table *spt = &thread_current ()->spt;
 
+	/********************  P3 추가 ***********************/
 	/* Check wheter the upage is already occupied or not. */
-	if (spt_find_page (spt, upage) == NULL) { //
-		/* TODO: Create the page, fetch the initialier according to the VM type,
-		 * TODO: and then create "uninit" page struct by calling uninit_new. You
-		 * TODO: should modify the field after calling the uninit_new. */
-
-		/********************  P3 추가 ***********************/
+	/* TODO: Create the page, fetch the initialier according to the VM type,
+	* TODO: and then create "uninit" page struct by calling uninit_new. You
+	* TODO: should modify the field after calling the uninit_new. */
+	if (spt_find_page (spt, upage) == NULL) { 
 		struct page *page = (struct page *)malloc(sizeof(struct page));
 
 		if (type == VM_ANON || type == (VM_ANON | VM_MARKER_0)){
@@ -135,7 +134,7 @@ vm_get_victim (void) {
 	struct frame *victim = NULL;
 	 /* TODO: The policy for eviction is up to you. */
 	struct thread *curr = thread_current();
-	struct list_elem *e;
+	struct list_elem *e = start;
 
 	/* initialize start to first element of the frame_table */
 	if (!start) {
@@ -146,7 +145,6 @@ vm_get_victim (void) {
 		victim = list_entry(e, struct frame, frame_elem);
 		if (pml4_is_accessed(curr->pml4, victim->page->va)) { // refer bit is 1 , 현제 스레드의 페이지내 victim page의 va의 레퍼 bit 체크.
 			pml4_set_accessed(curr->pml4, victim->page->va, 0);
-			victim = list_begin(&frame_table); // 양방향 설정?
 			start = list_next(e);
 		}	
 		else 		// refer bit is 0 
@@ -158,7 +156,6 @@ vm_get_victim (void) {
 		victim = list_entry(e, struct frame, frame_elem);
 		if (pml4_is_accessed(curr->pml4, victim->page->va)) {
 			pml4_set_accessed(curr->pml4, victim->page->va, 0);
-			victim = list_begin(&frame_table);
 			start = list_next(e);
 		}
 		else 
@@ -176,7 +173,7 @@ vm_evict_frame (void) {
 	/* TODO: swap out the victim and return the evicted frame. */
 	swap_out(victim->page);
 
-	return NULL;
+	return victim;
 }
 
 /* palloc() and get frame. If there is no available page, evict the page
@@ -187,23 +184,23 @@ static struct frame *
 vm_get_frame (void) {
 	struct frame *frame = NULL;
 	frame = (struct frame *)malloc(sizeof(struct frame));
+	
 	/* TODO: Fill this function. */
-
 	frame->kva = palloc_get_page(PAL_USER); 	// RAM user pool -> (virtual) kernel VA로 1page 할당
 
-	frame->page = NULL; 	// @@@
+	frame->page = NULL; 	// @ for debug
 
 	ASSERT (frame != NULL);
 	ASSERT (frame->page == NULL);
 
 	if (frame->kva == NULL) {
-		PANIC("todo");
-		// frame = vm_evict_frame();		// RAM user pool이 없으면 frame에서 evict, 새로 할당
-		// frame->page = NULL;
-		// return frame;
+		// PANIC("todo");
+		frame = vm_evict_frame();		// RAM user pool이 없으면 frame에서 evict, 새로 할당
+		frame->page = NULL;
+		return frame;
 	}
-	// list_push_back(&frame_table, &frame->frame_elem);
-	// frame->page = NULL;
+	list_push_back(&frame_table, &frame->frame_elem);
+	
 	return frame;
 }
 
@@ -222,7 +219,6 @@ vm_stack_growth (void *addr UNUSED) {
 	void *new_stack_bottom = stack_bottom;
 
 	while ((uintptr_t) new_stack_bottom > USER_STACK_LIMIT) {
-
 		if (vm_alloc_page(VM_ANON | VM_MARKER_0, new_stack_bottom, 1)) {
 			vm_claim_page(new_stack_bottom);
 			new_stack_bottom -= PGSIZE;
@@ -246,14 +242,6 @@ vm_try_handle_fault (struct intr_frame *f UNUSED, void *addr UNUSED,
 	/* TODO: Validate the fault */
 	if (is_kernel_vaddr(addr) || addr == NULL)
 		return false;
-
-	// 유저 스택을 가리키는 경우: f->rsp에 있는 유저 스택포인터 가져오기
-	// void *rsp_stack;
-	// if (is_kernel_vaddr(f->rsp)) {
-	// 	rsp_stack = &thread_current()->rsp_stack;
-	// } else {
-	// 	rsp_stack = f->rsp;
-	// }
 
 	/* TODO: Your code goes here */
 		// 스택 증가로 page fault 해결 가능한지
@@ -393,38 +381,13 @@ supplemental_page_table_kill (struct supplemental_page_table *spt UNUSED) {
 		if (page->operations->type == VM_FILE) {
 			do_munmap(page->va);
 		}
+		destroy(page);
 	}
-
 	hash_destroy(&spt->spt_hash, hash_action_destroy);
 
 	free(spt->spt_hash.aux);
 }
 
-
-/* Initializes I for iterating hash table H.
-
-   Iteration idiom:
-
-   struct hash_iterator i;
-
-   hash_first (&i, h);
-   while (hash_next (&i))
-   {
-   struct foo *f = hash_entry (hash_cur (&i), struct foo, elem);
-   ...do something with f...
-   }
-
-   Modifying hash table H during iteration, using any of the
-   functions hash_clear(), hash_destroy(), hash_insert(),
-   hash_replace(), or hash_delete(), invalidates all
-   iterators. */
-
-// /* A hash table iterator. */
-// struct hash_iterator {
-// 	struct hash *hash;          /* The hash table. */
-// 	struct list *bucket;        /* Current bucket. */
-// 	struct hash_elem *elem;     /* Current hash element in current bucket. */
-// };
 
 
 
