@@ -4,7 +4,7 @@
 #include "devices/disk.h"
 #include "vm/anon.h"
 #include <bitmap.h>
-
+         
 /* DO NOT MODIFY BELOW LINE */
 static struct disk *swap_disk;
 static bool anon_swap_in (struct page *page, void *kva);
@@ -46,7 +46,7 @@ anon_initializer (struct page *page, enum vm_type type, void *kva) {
 	page->operations = &anon_ops;
 	struct anon_page *anon_page = &page->anon;
 
-	anon_page->owner = thread_current();
+	// anon_page->owner = thread_current();
 	anon_page->swap_index = INVALID_SLOT_IDX;
 	return true;
 }
@@ -84,7 +84,7 @@ anon_swap_out (struct page *page) {
 	}
 
 	bitmap_set(swap_table, page_no, true);
-	pml4_clear_page(anon_page->owner->pml4, page->va, 0);
+	pml4_clear_page(&thread_current()->pml4, page->va, 0);
 
 	anon_page->swap_index = page_no;
 

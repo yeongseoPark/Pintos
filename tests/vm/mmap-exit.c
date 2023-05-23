@@ -14,9 +14,9 @@ test_main (void)
   /* Make child write file. */
   quiet = true;
 	child = fork("child-mm-wrt");
-	if (child == 0) {
+	if (child == 0) {	// 자식 스레드만 실행
 		CHECK ((child = exec ("child-mm-wrt")) != -1, "exec \"child-mm-wrt\"");
-	} else {
+	} else {			// 부모 스레드만 실행
 		CHECK (wait (child) == 0, "wait for child (should return 0)");
 		quiet = false;
 		

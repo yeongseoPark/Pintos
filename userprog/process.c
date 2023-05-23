@@ -437,14 +437,24 @@ void process_exit (void) {
     palloc_free_multiple(curr->fd_table, FDT_PAGES);
     file_close(curr->running);
 
+	/* munmap - file-backed 경우 매핑 해제 */
+	struct supplemental_page_table *spt = &curr->spt;
+	if (!hash_empty(&spt->spt_hash)) {
+		// hash talbe을 처음부터 돌면서 VM_FILE 타입을 do_munmap
+		struct hash_iterator iter;
+
+		hash_first(&iter, &spt->spt_hash);
+		while (hash_next(&iter)) {
+			struct page *page = hash_entry(hash_cur(&iter), struct page, hash_elem);
+			if (page->operations->type == VM_FILE) {
+				do_munmap(page->va);
+			}
+		}
+	}   
+
     sema_up(&curr->wait_sema); // 부모를 깨운다
     sema_down(&curr->free_sema); 
-	/*	부모가 process_wait의 해당코드를 실행해서 자식을 자식 리스트에서 지우는동안, 잠깐 기다리기 위해서 free sema를 down시켜서 현재 스레드는 잔다
-	int exit_status = child->exit_status;
-    list_remove(&child->child_elem);
-    sema_up(&child->free_sema); // 여기서 자식은 blocked에서 벗어나 스케줄링 될 기회를 얻음
-	만약 스케줄링이 되면, 바로 밑의 process_cleanup으로 자기 자신을 정리하고 끝내면 됨
-	*/
+
     process_cleanup ();
 }
 
@@ -869,14 +879,16 @@ static bool install_page (void *upage, void *kpage, bool writable) {
  * If you want to implement the function for only project 2, implement it on the
  * upper block. */
 
-static bool lazy_load_segment (struct page *page, void *aux) {
+bool lazy_load_segment (struct page *page, void *aux) {
 	/* TODO: Load the segment from the file */
 	/* TODO: This called when the first page fault occurs on address VA. */
 	/* TODO: VA is available when calling this function. */
 	
-	struct file *file = ((struct container *)aux)->file;
-	off_t offset = ((struct container *)aux)->offset;
-	size_t page_read_bytes = ((struct container *)aux)->page_read_bytes;
+	struct container *container = (struct container *)aux;
+	// aux 정보 가져오기
+	struct file *file = container->file;
+	off_t offset = container->offset;
+	size_t page_read_bytes = container->page_read_bytes;
 	size_t page_zero_bytes = PGSIZE - page_read_bytes;
 
 	file_seek(file, offset);
@@ -887,6 +899,8 @@ static bool lazy_load_segment (struct page *page, void *aux) {
 	}
 	// 남은 바이트는 0으로 세팅
 	memset(page->frame->kva + page_read_bytes, 0, page_zero_bytes);
+
+	// free(container);
 
 	return true;
 }

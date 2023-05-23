@@ -22,3 +22,5 @@ test_main (void)
   memcpy (ACTUAL, sample, sizeof sample);
 }
 
+// - mmap은 매핑만 시켜줄 뿐, memcpy가 실제로 파일을 변경함.
+// - 기존 exit은 그냥 종료였으나, 여기에 do_munmap을 추가해줘야 spt를 돌면서 변경된 파일을 disk에 써줄 수 있음.

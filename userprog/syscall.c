@@ -13,6 +13,7 @@
 #include "threads/vaddr.h"
 #include "userprog/process.h"
 #include "threads/palloc.h"
+#include "vm/vm.h"
 
 void syscall_entry (void); // syscall_entry.S를 실행하는데, 이때부터 시스템콜 코드
 /* syscall_entry의 진행 
@@ -44,6 +45,11 @@ void close(int fd);
 static struct file *find_file_by_fd(int fd);
 int add_file_to_fdt(struct file *file);
 void remove_file_from_fdt(int fd);
+
+// Project 3
+static void* mmap (void *addr, size_t length, int writable, int fd, off_t offset);
+static void munmap (void *addr);
+
 
 const int STDIN = 1;
 const int STDOUT = 2;
@@ -139,6 +145,13 @@ void syscall_handler (struct intr_frame *f UNUSED) {
             break;
         case SYS_CLOSE: // Close a file.
             close(f -> R.rdi);
+            break;
+        case SYS_MMAP:
+            f -> R.rax = (uint64_t) mmap((void*) f->R.rdi, (size_t) f->R.rsi, (int) f->R.rdx, (int) f->R.r10, (off_t) f->R.r8);
+            break;
+            // void *mmap (void *addr, size_t length, int writable, int fd, off_t offset);
+        case SYS_MUNMAP:
+            munmap ((void*) f->R.rdi);
             break;
         default:
             /*printf ("system call!\n");
@@ -289,22 +302,23 @@ void remove_file_from_fdt(int fd) {
 /* open(file) -> filesys_open(file) -> file_open(inode) -> file open 함수 실행 -> filesys_open
  * 을 통해서 file open 함수에 inode를 넣고 실행하여 file을 반환받음
  * inode는 우리가 입력한 파일 이름을 컴퓨터가 알고 있는 파일이름으로 바꾸는 과정 - link file과 file system의 연결고리
- * file_obj = file이 되고, 이를 현재 스레드 파일 디스크립터 테이블에 추가하여 관리할 수 있게함*/
+ * file_ = file이 되고, 이를 현재 스레드 파일 디스크립터 테이블에 추가하여 관리할 수 있게함*/
 int open(const char *file){
     check_address(file);
+
+    if (file == NULL) return -1;
+
     lock_acquire(&filesys_lock); 
 
-    struct file *file_obj = filesys_open(file); // 파일을 열고
+    struct file *file_ = filesys_open(file); // 파일을 열고
 
-    if (file_obj == NULL){
-        return -1;
-    }
+    if (file_ == NULL) return -1;
 
-    int fd = add_file_to_fdt(file_obj); // 현재 쓰레드의 fdt에 파일을 더함
+    int fd = add_file_to_fdt(file_); // 현재 쓰레드의 fdt에 파일을 더함
 
     /* if fd full?*/
     if(fd == -1){
-        file_close(file_obj);
+        file_close(file_);
     }
 
     lock_release(&filesys_lock);
@@ -312,13 +326,13 @@ int open(const char *file){
 }
 
 int filesize(int fd){
-    struct file *file_obj = find_file_by_fd(fd);
+    struct file *file_ = find_file_by_fd(fd);
 
     // 파일이 열려있지 않을 경우 예외 처리
-    if (file_obj == NULL){
+    if (file_ == NULL){
         return -1;
     }
-    return file_length(file_obj); // inode의 data값에서 length를 뽑아냄
+    return file_length(file_); // inode의 data값에서 length를 뽑아냄
 }
 
 /*열린 파일의 데이터를 읽는 시스템 콜
@@ -331,14 +345,14 @@ int read(int fd, void *buffer, unsigned size){
     check_address(buffer+size-1);
     int read_count; // 글자수 카운트 용(for문 사용하기 위해)
 
-    struct file *file_obj = find_file_by_fd(fd);
+    struct file *file_ = find_file_by_fd(fd);
     unsigned char *buf = buffer;
 
-    if (file_obj == NULL){
+    if (file_ == NULL){
         return -1;
     }
 
-    if(file_obj == STDIN){ // STDIN - 키보드 입력을 버퍼에 넣음
+    if(file_ == STDIN){ // STDIN - 키보드 입력을 버퍼에 넣음
         char key;
         for (int read_count = 0; read_count < size; read_count++){
             key = input_getc();
@@ -347,11 +361,11 @@ int read(int fd, void *buffer, unsigned size){
                 break;
             }
         }
-    }else if (file_obj == STDOUT){ // STDOUT - 출력을 읽을순 없다
+    }else if (file_ == STDOUT){ // STDOUT - 출력을 읽을순 없다
         return -1;
     } else {
         lock_acquire(&filesys_lock);
-        read_count = file_read(file_obj, buffer, size); // 파일을 읽어 버퍼에 넣음
+        read_count = file_read(file_, buffer, size); // 파일을 읽어 버퍼에 넣음
         lock_release(&filesys_lock);
     }
 
@@ -362,48 +376,90 @@ int read(int fd, void *buffer, unsigned size){
 int write(int fd, void *buffer, unsigned size){
     check_address(buffer);
     int read_count;
-    struct file *file_obj = find_file_by_fd(fd);
+    struct file *file_ = find_file_by_fd(fd);
 
-    if (file_obj == NULL){
+    if (file_ == NULL){
         return -1;
     }
 
-    if(file_obj == STDOUT){ // STDOUT
+    if(file_ == STDOUT){ // STDOUT
         putbuf(buffer, size); // fd값이 1일 때, 버퍼에 저장된 데이터를 화면에 출력(putbuf()이용)
         read_count = size;
-    } else if (file_obj == STDIN){ // STDIN
+    } else if (file_ == STDIN){ // STDIN
         return -1;
     } else{
         lock_acquire(&filesys_lock);
-        read_count = file_write(file_obj, buffer, size);
+        read_count = file_write(file_, buffer, size);
         lock_release(&filesys_lock);
     }
     return read_count;
 }
 
 void seek(int fd, unsigned position){
-    struct file *file_obj = find_file_by_fd(fd);
+    struct file *file_ = find_file_by_fd(fd);
     if (fd < 2){
         return;
     }
-    file_seek(file_obj, position); // 파일에서의 위치를 position으로 변경
+    file_seek(file_, position); // 파일에서의 위치를 position으로 변경
 }
 
 unsigned tell(int fd){
-    struct file *file_obj = find_file_by_fd(fd);
+    struct file *file_ = find_file_by_fd(fd);
     if (fd < 2){
         return;
     }
-    return file_tell(file_obj); // 현재 pos를 찾음
+    return file_tell(file_); // 현재 pos를 찾음
 }
 
 void close(int fd){
     if (fd <= 1) return;
-    struct file *file_obj = find_file_by_fd(fd);
+    struct file *file_ = find_file_by_fd(fd);
 
-    if (file_obj == NULL){
+    if (file_ == NULL){
         return;
     }
     remove_file_from_fdt(fd);
 }
+// *************************ADDED LINE ENDS HERE************************* //
+
+
+
+// ******************************LINE ADDED****************************** //
+/* Project 3-3 : Virtual Memory - Memory Mapped files
+ * 매핑하려는 주소 & 읽으려는 파일이 유효한가?
+ * 읽을 파일의 offset이 왜 align 해야하지? 
+ */
+static void*
+mmap (void *addr, size_t length, int writable, int fd, off_t offset) {
+
+    struct file *file = find_file_by_fd(fd);
+    struct thread *t = thread_current();
+
+    // addr is not page-aligned
+    if ((uint64_t)addr % PGSIZE != 0) return NULL;
+
+    // overlaps existing set of mapped pages
+    for (uint64_t i = (uint64_t)addr; i < (uint64_t)addr + length; i += PGSIZE) {
+        if (spt_find_page(&t->spt, (void*)i) != NULL) return NULL;
+    }
+
+    // addr == 0 -> fail, 핀토스는 virtual page 0를 'not mapped'로 간주
+    if (addr == 0) return NULL;
+
+    // length is zero
+    if (length == 0 || file == NULL) return NULL;
+
+    // fd = 0, 1(console input/output)
+    if (fd == 0 || fd == 1) return NULL;
+
+    return do_mmap(addr, length, writable, file, offset);
+}
+
+
+static void 
+munmap (void *addr) {
+    do_munmap(addr);
+}
+
+
 // *************************ADDED LINE ENDS HERE************************* //

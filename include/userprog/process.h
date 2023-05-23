@@ -1,4 +1,4 @@
-#ifndef USERPROG_PROCESS_H
+#ifndef USERPROG_PROCESS_H 
 #define USERPROG_PROCESS_H
 
 #include "threads/thread.h"
@@ -16,5 +16,9 @@ void argument_stack(char **argv, int argc, struct intr_frame *if_);
 // Project 2-2-1 : User Programs - System Call - Basics
 struct thread * get_child(int pid);
 // *************************ADDED LINE ENDS HERE************************* //
+
+// #ifdef VM
+bool lazy_load_segment (struct page *page, void *aux);
+// #endif /* VM */
 
 #endif /* userprog/process.h */

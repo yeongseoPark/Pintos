@@ -174,13 +174,13 @@ disk_print_stats (void) {
 }
 
 /* Returns the disk numbered DEV_NO--either 0 or 1 for master or
-   slave, respectively--within the channel numbered CHAN_NO.
+   slave, respectively--within the channel numbered CHAN_NO.        (참고) 0:1 -> slave device(1) on channel 0. disks are organized into channels, and each channel potentially having multiple device.
 
-   Pintos uses disks this way:
-0:0 - boot loader, command line args, and operating system kernel
-0:1 - file system
-1:0 - scratch
-1:1 - swap
+   Pintos uses disks this way:			(참고) device no : channel no
+0:0 - boot loader, command line args, and operating system kernel :  (참고) 부트 로더: OS 커널을 메모리로 로딩할 때 쓰는 소프트웨어. 하드웨어에 의해 처음 실행되는 코드임. / refers to the organization of data on the disk devices connected to channel 0.
+0:1 - file system				"0:1"은 채널 0의 슬레이브 장치(장치 1)를 나타냅니다. Pintos에서 이 장치는 파일 시스템 저장 전용입니다. 파일 시스템은 디스크에 있는 파일의 구성, 저장 및 검색을 관리합니다. 파일 시스템을 별도의 장치에 저장하면 파일 관련 작업을 효율적이고 독립적으로 관리할 수 있습니다.
+1:0 - scratch					"1:0"은 채널 1의 마스터 장치(장치 0)를 나타냅니다. 핀토스에서는 이 장치를 "스크래치" 장치로 지정합니다. 스크래치 장치는 다양한 시스템 작업 또는 프로세스를 실행하는 동안 임시 저장소 또는 작업 공간으로 사용됩니다. 시스템이 중간 결과, 캐시 또는 기타 일시적인 정보와 같은 데이터를 임시로 저장할 수 있는 공간을 제공합니다.
+1:1 - swap						"1:1"은 채널 1의 슬레이브 장치(장치 1)를 나타냅니다. 핀토에서 이 장치는 "스왑" 기능을 위해 할당됩니다. 스왑 공간은 운영 체제가 비활성 상태이거나 액세스 빈도가 낮은 메모리 페이지를 일시적으로 디스크에 옮길 수 있도록 하는 컴퓨터의 물리적 메모리(RAM)의 확장입니다. 
 */
 struct disk *
 disk_get (int chan_no, int dev_no) {

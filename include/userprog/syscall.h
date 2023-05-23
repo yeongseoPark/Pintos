@@ -8,6 +8,8 @@ void syscall_init (void);
 void check_address(void *addr);
 // Project 2-2-2 : User Programs - System Call - File Descriptor
 struct lock filesys_lock;
+
+
 // *************************ADDED LINE ENDS HERE************************* //
 
 #endif /* USERPROG_SYSCALL_H */

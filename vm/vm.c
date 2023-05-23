@@ -141,22 +141,20 @@ vm_get_victim (void) {
 		start = list_begin(&frame_table);
 	}
 
-	for (e = start; e != list_end(&frame_table); e = list_next(e)) {
-		victim = list_entry(e, struct frame, frame_elem);
+	for (start = e; start != list_end(&frame_table); start = list_next(start)) {
+		victim = list_entry(start, struct frame, frame_elem);
 		if (pml4_is_accessed(curr->pml4, victim->page->va)) { // refer bit is 1 , 현제 스레드의 페이지내 victim page의 va의 레퍼 bit 체크.
 			pml4_set_accessed(curr->pml4, victim->page->va, 0);
-			start = list_next(e);
 		}	
 		else 		// refer bit is 0 
 			return victim;
 	}
 	
 	/* If no victim is found from start to end, search from beginning to start */
-	for (e = list_begin(&frame_table); e != start; e = list_next(e)) {
-		victim = list_entry(e, struct frame, frame_elem);
+	for (start = list_begin(&frame_table); start != e; start = list_next(start)) {
+		victim = list_entry(start, struct frame, frame_elem);
 		if (pml4_is_accessed(curr->pml4, victim->page->va)) {
 			pml4_set_accessed(curr->pml4, victim->page->va, 0);
-			start = list_next(e);
 		}
 		else 
 			return victim;
@@ -277,8 +275,9 @@ vm_dealloc_page (struct page *page) {
 bool
 vm_claim_page (void *va UNUSED) {
 	struct page *page = NULL;
+	struct thread *curr = thread_current();
 	/* TODO: Fill this function */
-	page = spt_find_page(&thread_current()->spt, va);  // va를 주고, 해당 hash_elem가 속한 page 리턴
+	page = spt_find_page(&curr->spt, va);  // va를 주고, 해당 hash_elem가 속한 page 리턴
 	if (page == NULL)
 		return false;
 
@@ -325,6 +324,9 @@ supplemental_page_table_copy (struct supplemental_page_table *dst UNUSED,
 	while (hash_next(&iter)) {
 		// 복사할 hash_elem과 연결된 page를 찾아 해당 page의 구조체 가져오기
 		struct page *parent_page = hash_entry(hash_cur(&iter), struct page, hash_elem);
+
+		int ty = VM_TYPE (parent_page->operations->type);
+		printf("jisu: parent_page's type is %d\n", ty);
 
 		// Q. src spt에 언제 va가 들어갔지??
 		if (parent_page->operations->type == VM_UNINIT) {		// 아직 한번도 접근되지 않은, UNINIT 상태의 parent_page를 fork하는 경우

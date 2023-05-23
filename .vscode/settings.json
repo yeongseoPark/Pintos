@@ -18,6 +18,11 @@
         "sstream": "c",
         "vm.h": "c",
         "synch.h": "c",
-        "file.h": "c"
+        "file.h": "c",
+        "process.h": "c",
+        "*.inc": "c",
+        "inspect.h": "c",
+        "anon.h": "c",
+        "mmu.h": "c"
     }
 }
