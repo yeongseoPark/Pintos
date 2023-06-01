@@ -47,7 +47,7 @@ anon_initializer (struct page *page, enum vm_type type, void *kva) {
 	struct anon_page *anon_page = &page->anon;
 
 	// anon_page->owner = thread_current();
-	anon_page->swap_index = INVALID_SLOT_IDX;
+	anon_page->swap_index = INVALID_SLOT_IDX;	// &page->anon->swap_index를 설정함.
 	return true;
 }
 
@@ -58,15 +58,12 @@ anon_swap_in (struct page *page, void *kva) {
 	int page_no = anon_page->swap_index;
 
 	if (anon_page->swap_index == INVALID_SLOT_IDX) return false;
-
 	if (bitmap_test(swap_table, page_no) == false) return false;
 
 	for (int i = 0; i < SECTORS_PER_PAGE; ++i) {
 		disk_read(swap_disk, page_no * SECTORS_PER_PAGE + i, kva + DISK_SECTOR_SIZE * i);
 	}
-
 	bitmap_set(swap_table, page_no, false);
-
 	return true;
 }
 
@@ -82,12 +79,10 @@ anon_swap_out (struct page *page) {
 		// Convert swap slot index to writing sector number
 		disk_write(swap_disk, page_no * SECTORS_PER_PAGE + i, page->va + DISK_SECTOR_SIZE * i);
 	}
-
 	bitmap_set(swap_table, page_no, true);
 	pml4_clear_page(&thread_current()->pml4, page->va, 0);
 
 	anon_page->swap_index = page_no;
-
 	return true;
 }
 

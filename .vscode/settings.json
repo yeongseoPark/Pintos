@@ -23,6 +23,11 @@
         "*.inc": "c",
         "inspect.h": "c",
         "anon.h": "c",
-        "mmu.h": "c"
+        "mmu.h": "c",
+        "malloc.h": "c",
+        "filesys.h": "c",
+        "syscall.h": "c",
+        "directory.h": "c",
+        "thread.h": "c"
     }
 }

@@ -14,6 +14,8 @@
 #include "userprog/process.h"
 #include "threads/palloc.h"
 #include "vm/vm.h"
+#include "filesys/directory.h"
+#include <syscall.h>
 
 void syscall_entry (void); // syscall_entry.S를 실행하는데, 이때부터 시스템콜 코드
 /* syscall_entry의 진행 
@@ -40,6 +42,15 @@ int write(int fd, void *buffer, unsigned size);
 void seek(int fd, unsigned position);
 unsigned tell(int fd);
 void close(int fd);
+
+/* Project 4 only. */
+bool chdir (const char *dir);
+bool mkdir (const char *dir);
+bool readdir (int fd, char name[READDIR_MAX_LEN + 1]);
+bool isdir (int fd);
+int inumber (int fd);
+int symlink (const char* target, const char* linkpath);
+
 
 // Project 2-2-2 : User Programs - System Call - File Descriptor
 static struct file *find_file_by_fd(int fd);
@@ -432,7 +443,7 @@ void close(int fd){
 static void*
 mmap (void *addr, size_t length, int writable, int fd, off_t offset) {
 
-    struct file *file = find_file_by_fd(fd);
+    struct file *file = find_file_by_fd(fd);        // 앞에서 open 시스템 콜로 fd 리턴한 것을 받아서
     struct thread *t = thread_current();
 
     // addr is not page-aligned
@@ -463,3 +474,74 @@ munmap (void *addr) {
 
 
 // *************************ADDED LINE ENDS HERE************************* //
+
+
+
+// ************************* P4-2 추가 ************************* //
+bool chdir(const char *name)        // name: new dir path
+{
+    struct thread *curr = thread_current();
+
+    char *copy_name = (char *)malloc(strlen(name) + 1);  // 메모리 할당 
+    if (copy_name == NULL) return false;
+
+    strlcpy(copy_name, name, strlen(name) + 1);     // 문자열 복사
+    if (strlen(copy_name) == 0) return false;
+
+    struct dir *dir;
+
+    if (copy_name[0] == '/')        // '/' -> 절대 경로
+        dir = dir_open_root();      // inode_open(root), root = #define ROOT_DIR_CLUSTER 1    /* Cluster for the root directory */
+    else
+        dir = dir_reopen(curr->curr_dir); // 상대경로: 현재 스레드의 dir를 연다- dir * 리턴. 
+
+    /* 새로운 path명을 경로로 파싱해, 해당 dir을 inode로 지정, dir_open(inode) */
+    char *token, *save_ptr;
+    token = strtok_r(copy_name, "/", &save_ptr);    // 구분 기호로 '/'가 포함된 strtok_r을 사용하여 토큰화. 경로가 개별 디렉토리 또는 파일 이름으로 분할
+
+    struct inode *inode = NULL; // 디렉토리 또는 파일의 inode를 저장하는 데 사용
+
+    while (token != NULL) {    
+        if (!dir_lookup(dir, token, &inode))  // @@@@@@ token: dir에서 파일명(token)에 해당하는 inode를 찾아 &inode에 저장. On success, sets *INODE to an inode for the file / &inode 역참조로 이미 값 할당했음
+            goto fail;  
+        if (!inode_is_dir(inode))
+            goto fail;
+
+        dir_close(dir); // 현재 디렉토리(dir)는 dir_close를 사용하여 닫고
+        dir = dir_open(inode); // @@@@@@ dir_lookp에서 얻은 inode는 dir_open을 사용하여 새 디렉토리를 여는 데 사용
+    
+        token = strtok_r(NULL, "/", &save_ptr); // path 끝까지- dir인 한 계속 폴더를 열어 'dir'에 저장
+    }
+
+    dir_close(curr->curr_dir);  // 모든 토큰 처리를 완료하면 curr_dir를 닫고
+    curr->curr_dir = dir;       // @@@@@@ 새 디렉토리(dir)가 curr->curr_dir에 할당
+    free(copy_name);
+
+    return true;
+
+fail:
+    dir_close(dir);
+    if (inode)
+        inode_close(inode); // 연 건 다 닫고 false 처리
+
+    return false;
+}
+
+
+
+
+bool mkdir (const char *dir)
+{
+    char *copy_dir = (char *)malloc(strlen(dir) + 1);
+    if (copy_dir == NULL) return false;
+
+    strlcpy(copy_dir, dir, strlen(dir) + 1); // strlcpy (*dest, *src, size)
+
+    lock_acquire(&filesys_lock);
+    bool succ = filesys_create_dir(copy_dir);
+    lock_release(&filesys_lock);
+
+    free(copy_dir);
+
+    return succ;
+}

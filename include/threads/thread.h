@@ -141,6 +141,9 @@ struct thread {
     int stdout_count;
 
     struct file *running;
+
+    // Project 4-2 : Subdirectory
+    struct dir *curr_dir;
     // *************************ADDED LINE ENDS HERE************************* //
 
 #ifdef USERPROG

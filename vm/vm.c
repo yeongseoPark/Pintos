@@ -159,7 +159,7 @@ vm_get_victim (void) {
 		else 
 			return victim;
 	}
-	return victim;			// for문을 다 돌아도 victim(레퍼 bit 0)이 안나오면 현재 리턴?
+	return victim;			// 모든 frame을 다 돌아도 victim(accessed bit 0)이 안나오면 현재 페이지를 evict
 }
 
 
@@ -168,7 +168,7 @@ vm_get_victim (void) {
 static struct frame *
 vm_evict_frame (void) {
 	struct frame *victim UNUSED = vm_get_victim ();
-	/* TODO: swap out the victim and return the evicted frame. */
+	/* swap out the victim and return the evicted frame. */
 	swap_out(victim->page);
 
 	return victim;
@@ -233,29 +233,25 @@ vm_handle_wp (struct page *page UNUSED) {
 bool
 vm_try_handle_fault (struct intr_frame *f UNUSED, void *addr UNUSED,
 		bool user UNUSED, bool write UNUSED, bool not_present UNUSED) {
-	// struct thread *curr = thread_current();
+
 	struct supplemental_page_table *spt UNUSED = &thread_current()->spt;
 	struct page *page = NULL;
 
-	/* TODO: Validate the fault */
+	/* Validate the fault */
 	if (is_kernel_vaddr(addr) || addr == NULL)
 		return false;
 
-	/* TODO: Your code goes here */
-		// 스택 증가로 page fault 해결 가능한지
+		// 스택 증가로 page fault 해결 가능한지 판단
 		if (f->rsp - 8 <= addr && addr <= USER_STACK && USER_STACK - 0x100000 <= addr) {
 			vm_stack_growth(thread_current()->stack_bottom - PGSIZE);
 			return true;
 	}
 
-	// 현재 페이지가 없는 경우
 	if (not_present) {
 		// spt에서 주소에 맞는 페이지 가져오기
 		page = spt_find_page(spt, addr);
-
 		if (page == NULL)
 			return false;
-
 		if (vm_do_claim_page(page) == false)   // spt에서 찾은 page로 물리페이지 요청
 			return false; 
 	}

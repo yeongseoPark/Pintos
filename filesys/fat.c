@@ -5,31 +5,8 @@
 #include "threads/synch.h"
 #include <stdio.h>
 #include <string.h>
+#include <bitmap.h>
 
-/* Should be less than DISK_SECTOR_SIZE */
-struct fat_boot {
-	unsigned int magic;
-	unsigned int sectors_per_cluster; /* Fixed to 1 */
-	unsigned int total_sectors;
-	unsigned int fat_start;
-	unsigned int fat_sectors; /* Size of FAT in sectors. */
-	unsigned int root_dir_cluster;
-};
-
-/* FAT FS */
-struct fat_fs {
-	struct fat_boot bs;
-	unsigned int *fat;
-	unsigned int fat_length;
-	disk_sector_t data_start;
-	cluster_t last_clst;
-	struct lock write_lock;
-};
-
-static struct fat_fs *fat_fs;
-
-void fat_boot_create (void);
-void fat_fs_init (void);
 
 void
 fat_init (void) {
@@ -49,6 +26,9 @@ fat_init (void) {
 	if (fat_fs->bs.magic != FAT_MAGIC)
 		fat_boot_create ();
 	fat_fs_init ();
+
+	/* Project 4 추가 */
+	fat_bitmap = bitmap_create(fat_fs->fat_length);
 }
 
 void
@@ -152,7 +132,11 @@ fat_boot_create (void) {
 
 void
 fat_fs_init (void) {
-	/* TODO: Your code goes here. */
+	/* file system 클러스터 개수(data region)를 계산해 fat_length에 저장 */
+	// fat_fs가 전체 파일시스템이라면, fat_boot(boot sector)안에 filesys layout에 대한 정보들이 들어있기 때문에
+	// boot sector 정보를 가지고 fat_fs의 data region 시작지점 및 클러스터 개수를 계산하는 식으로 이뤄짐. 
+	fat_fs->fat_length = disk_size(filesys_disk) -1 - fat_fs->bs.fat_sectors;	// data_start 에서 얼마나 많은 클러스터가 있는지 
+	fat_fs->data_start = fat_fs->bs.fat_start + fat_fs->bs.fat_sectors;			
 }
 
 /*----------------------------------------------------------------------------*/
@@ -164,30 +148,79 @@ fat_fs_init (void) {
  * Returns 0 if fails to allocate a new cluster. */
 cluster_t
 fat_create_chain (cluster_t clst) {
-	/* TODO: Your code goes here. */
+	/* clst에 지정된 클러스터 뒤에 추가하여 체인 확장. 
+	 * 지정된 clst가 0이면 새 체인을 만들고, 새로 할당된 클러스터 번호 반환
+	 * 즉, 인자가 0이면 해당 clst 넘버 전의 것을 EOF로 결말짓고 새로운 클러스터를 시작하며,
+	 * 인자가 0이 아닌 특정 값(x)면 x 다음의 빈 블록의 넘버를 fat[x-1] = val에 넣음으로써 다음 파일조각으로 정함. 
+	*/
+	cluster_t new_clst = get_empty_cluster();	// 빈 클러스터를 bitmap에서 가져온다
+	if (new_clst == 0) return NULL;
+	
+	fat_put(new_clst, EOChain);
+
+	if (clst != 0) {
+		fat_put(clst, new_clst);
+	}
+	return new_clst;
 }
+/* 핀토스에서 EOChain은 큰 값임. -1 X. 따라서 fat_get(i) > 0 에 걸리는 조건은 free block 밖에 없음 */
+
+cluster_t get_empty_cluster() {
+	size_t clst = bitmap_scan_and_flip(fat_bitmap, 0, 1, false) + 1;
+	if (clst == BITMAP_ERROR) 
+		return 0;
+	else	
+		return (cluster_t) clst;	// type casting
+}
+
+
 
 /* Remove the chain of clusters starting from CLST.
  * If PCLST is 0, assume CLST as the start of the chain. */
 void
 fat_remove_chain (cluster_t clst, cluster_t pclst) {
-	/* TODO: Your code goes here. */
+	/* clst부터 pclst까지 제거 */
+	/* pclst가 입력됐다면, pclst를 끝으로 만듦 */
+	if (pclst)
+		fat_put(pclst, EOChain);
+
+	// clst부터 순회하며 FAT에서 할당 해제(0)로 설정
+	cluster_t temp_c = clst;
+	cluster_t next_c;
+	for (; fat_get(temp_c) != EOChain; temp_c = next_c) {
+		next_c = fat_get(temp_c);
+		fat_put(temp_c, 0);
+	}
+	fat_put(temp_c, 0);  	// EOChain도 0으로 변경
 }
 
 /* Update a value in the FAT table. */
 void
 fat_put (cluster_t clst, cluster_t val) {
-	/* TODO: Your code goes here. */
+	/*  */
+	if (cluster_to_sector(clst - 1) >= disk_size(filesys_disk)) return;
+
+	fat_fs->fat[clst - 1] = val;
 }
 
 /* Fetch a value in the FAT table. */
 cluster_t
 fat_get (cluster_t clst) {
-	/* TODO: Your code goes here. */
+	return fat_fs->fat[clst - 1];
 }
 
 /* Covert a cluster # to a sector number. */
 disk_sector_t
 cluster_to_sector (cluster_t clst) {
 	/* TODO: Your code goes here. */
+	return fat_fs->data_start + clst;	// 1 sector for 1 cluster. (data region부터 sector 카운트)
+}
+
+cluster_t
+sector_to_clustor(disk_sector_t sector) {
+	cluster_t clst = sector - fat_fs->data_start;
+
+	if (clst < 2) return 0;
+
+	return clst;
 }

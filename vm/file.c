@@ -20,7 +20,7 @@ static const struct page_operations file_ops = {
 
 
 // ******************************LINE ADDED****************************** //
-struct container {
+struct load_aux {
     struct file *file;
     off_t offset;
     size_t page_read_bytes;
@@ -49,12 +49,12 @@ file_backed_swap_in (struct page *page, void *kva) {
 	struct file_page *file_page UNUSED = &page->file;
 	struct thread *t = thread_current();
 
-	struct container *container = (struct container *)page->uninit.aux;	
+	struct load_aux *load_aux = (struct load_aux *)page->uninit.aux;	
 
-	file_seek(container->file, container->offset);
-	off_t read_size = file_read(container->file, kva, container->page_read_bytes);
+	file_seek(load_aux->file, load_aux->offset);
+	off_t read_size = file_read(load_aux->file, kva, load_aux->page_read_bytes);
 
-	if (read_size != container->page_read_bytes) return false;
+	if (read_size != load_aux->page_read_bytes) return false;
 	if (read_size < PGSIZE) {
 		memset (kva + read_size, 0, PGSIZE - read_size);
 	}
@@ -69,9 +69,9 @@ file_backed_swap_out (struct page *page) {
 
 	if (page == NULL) return false;
 
-	struct container *container = (struct container *)page->uninit.aux;		// page의 uninit 구조체로부터 접근
+	struct load_aux *load_aux = (struct load_aux *)page->uninit.aux;		// page의 uninit 구조체로부터 접근
 	if (pml4_is_dirty(t->pml4, page->va)) {
-		file_write_at(container->file, page->va, container->page_read_bytes, container->offset);
+		file_write_at(load_aux->file, page->va, load_aux->page_read_bytes, load_aux->offset);
 		pml4_set_dirty(t->pml4, page->va, 0);
 	}
 
@@ -102,22 +102,21 @@ do_mmap (void *addr, size_t length, int writable,
 
 	// 시작 주소 : 페이지 확장시 리턴 주소값 변경 방지
 	void *start_addr = addr;
-
 	if (file_ == NULL || read_bytes == 0) return NULL;
 
-	/* 실제 가상페이지 할당하는 부분 */
+	/* 가상 페이지 매핑 */
 	while (read_bytes > 0 || zero_bytes > 0) {	// 둘 다 0이 될 때까지 반복.
-		// 파일을 페이지 단위로 잘라 container에 저장 
+		// 파일을 페이지 단위로 잘라 load_aux에 저장 
 		size_t page_read_bytes = read_bytes > PGSIZE ? PGSIZE : read_bytes;		// 마지막에만 read_bytes
 		size_t page_zero_bytes = PGSIZE - page_read_bytes;		// 중간에는 0, 마지막에 padding
 
-		struct container *container = (struct container *)malloc(sizeof(struct container));
-		container->file = file_;
-		container->offset = offset_;
-		container->page_read_bytes = page_read_bytes;
+		struct load_aux *load_aux = (struct load_aux *)malloc(sizeof(struct load_aux));
+		load_aux->file = file_;
+		load_aux->offset = offset_;
+		load_aux->page_read_bytes = page_read_bytes;
 
 		// 대기중인 오브젝트 생성 - 초기화되지 않은 주어진 타입의 페이지 생성. 나중에 UNINIT을 FILE-backed로. 
-		if (!vm_alloc_page_with_initializer(VM_FILE, addr, writable, lazy_load_segment, container)) {
+		if (!vm_alloc_page_with_initializer(VM_FILE, addr, writable, lazy_load_segment, load_aux)) {
 			return NULL;
 		}
 		// 다음 페이지로 이동
@@ -133,11 +132,11 @@ do_mmap (void *addr, size_t length, int writable,
 /*
 static bool lazy_load_file (struct page *page, void *aux) {
 	
-	struct container *container = (struct container *)aux;
+	struct load_aux *load_aux = (struct load_aux *)aux;
 	// aux 정보 가져오기
-	struct file *file = container->file;
-	off_t offset = container->offset;
-	size_t page_read_bytes = container->page_read_bytes;
+	struct file *file = load_aux->file;
+	off_t offset = load_aux->offset;
+	size_t page_read_bytes = load_aux->page_read_bytes;
 	size_t page_zero_bytes = PGSIZE - page_read_bytes;
 
 	// file을 지정된 offset부터 읽는다
@@ -150,7 +149,7 @@ static bool lazy_load_file (struct page *page, void *aux) {
 
 	pml4_set_dirty (thread_current()->pml4, page->va, 0);  // 처음 로딩. 변경된 적 없음.
 
-	free(container);
+	free(load_aux);
 
 	return true;
 }
@@ -168,27 +167,16 @@ do_munmap (void *addr) {
 	// traverse 
 	while (true) {
 		struct page *page = spt_find_page(&t->spt, addr);
-
 		if (page == NULL)
 			return;
+		// 파일 변경사항을 반영할 수 있도록 aux를 받아옴
+		struct load_aux *load_aux = (struct load_aux *)page->uninit.aux;
 
-		// 파일이 수정된 후 다시 수정될 수 있도록 aux를 받아옴
-		// Q. container에 언제 넣어줬나?
-		struct container *container = (struct container *)page->uninit.aux;
-
-		// 수정된 페이지(dirty bit == 1)는 업데이트 해둔다. 이후 dirty bit 0으로.
 		if (pml4_is_dirty(t->pml4, page->va)) {
-			// 수정된 파일 다시 쓰기 
 			// Writes SIZE bytes from BUFFER into FILE
-			file_write_at(container->file, addr, container->page_read_bytes, container->offset);
-
+			file_write_at(load_aux->file, addr, load_aux->page_read_bytes, load_aux->offset);
 			pml4_set_dirty(t->pml4, page->va, 0);			
 		}
-
-		// present bit를 0으로 ?
-		// process exit()에서 cleanup()을 호출하여 삭제하므로 여기서 페이지를 삭제하면 TC 실패
-		// pml4_clear_page(t->pml4, page->va);
-
 		addr += PGSIZE;		
 	}
 }

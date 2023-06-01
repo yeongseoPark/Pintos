@@ -44,7 +44,7 @@ static void process_init (void) {
 }
 
 // ******************************LINE ADDED****************************** //
-struct container {
+struct load_aux {
     struct file *file;
     off_t offset;
     size_t page_read_bytes;
@@ -440,7 +440,6 @@ void process_exit (void) {
 	/* munmap - file-backed 경우 매핑 해제 */
 	struct supplemental_page_table *spt = &curr->spt;
 	if (!hash_empty(&spt->spt_hash)) {
-		// hash talbe을 처음부터 돌면서 VM_FILE 타입을 do_munmap
 		struct hash_iterator iter;
 
 		hash_first(&iter, &spt->spt_hash);
@@ -451,8 +450,7 @@ void process_exit (void) {
 			}
 		}
 	}   
-
-    sema_up(&curr->wait_sema); // 부모를 깨운다
+    sema_up(&curr->wait_sema); // unblock parent
     sema_down(&curr->free_sema); 
 
     process_cleanup ();
@@ -884,11 +882,11 @@ bool lazy_load_segment (struct page *page, void *aux) {
 	/* TODO: This called when the first page fault occurs on address VA. */
 	/* TODO: VA is available when calling this function. */
 	
-	struct container *container = (struct container *)aux;
+	struct load_aux *load_aux = (struct load_aux *)aux;
 	// aux 정보 가져오기
-	struct file *file = container->file;
-	off_t offset = container->offset;
-	size_t page_read_bytes = container->page_read_bytes;
+	struct file *file = load_aux->file;
+	off_t offset = load_aux->offset;
+	size_t page_read_bytes = load_aux->page_read_bytes;
 	size_t page_zero_bytes = PGSIZE - page_read_bytes;
 
 	file_seek(file, offset);
@@ -900,7 +898,7 @@ bool lazy_load_segment (struct page *page, void *aux) {
 	// 남은 바이트는 0으로 세팅
 	memset(page->frame->kva + page_read_bytes, 0, page_zero_bytes);
 
-	// free(container);
+	// free(load_aux);
 
 	return true;
 }
@@ -933,14 +931,14 @@ static bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
 		size_t page_zero_bytes = PGSIZE - page_read_bytes;
 
 		/* TODO: Set up aux to pass information to the lazy_load_segment. */
-		struct container *container = (struct container *)malloc(sizeof(struct container));
-		container->file = file;
-		container->offset = ofs;
-		container->page_read_bytes = page_read_bytes;
+		struct load_aux *load_aux = (struct load_aux *)malloc(sizeof(struct load_aux));
+		load_aux->file = file;
+		load_aux->offset = ofs;
+		load_aux->page_read_bytes = page_read_bytes;
 		
 		// void *aux = NULL;
 		if (!vm_alloc_page_with_initializer (VM_ANON, upage,
-					writable, lazy_load_segment, container))
+					writable, lazy_load_segment, load_aux))
 			return false;
 
 		/* Advance. */

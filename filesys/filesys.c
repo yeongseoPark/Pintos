@@ -3,10 +3,13 @@
 #include <stdio.h>
 #include <string.h>
 #include "filesys/file.h"
+#include "filesys/filesys.h"
 #include "filesys/free-map.h"
 #include "filesys/inode.h"
 #include "filesys/directory.h"
 #include "devices/disk.h"
+#include "threads/thread.h"
+#include "filesys/fat.h"
 
 /* The disk that contains the file system. */
 struct disk *filesys_disk;
@@ -56,7 +59,7 @@ void filesys_done (void) {
  * Fails if a file named NAME already exists,
  * or if internal memory allocation fails. */
 bool filesys_create (const char *name, off_t initial_size) {
-	/* disk_sector_t : disk 안에서 disk sector의 인덱스 */
+
 	disk_sector_t inode_sector = 0; 
 
 	/* inode와 off_t를 멤버로 가지는 dir구조체
@@ -87,7 +90,7 @@ bool filesys_create (const char *name, off_t initial_size) {
 	struct dir *dir = dir_open_root (); // 루트 디렉토리 오픈
 	bool success = (dir != NULL
 			&& free_map_allocate (1, &inode_sector) // 하나의 free sector를 찾고, 첫번째부분을 inode_sector에 저장 
-			&& inode_create (inode_sector, initial_size) // initial size만큼의 inode를 초기화하고, file system disk의 sector에 inode를 씀
+			&& inode_create (inode_sector, initial_size, 0) // initial size만큼의 inode를 초기화하고, file system disk의 sector에 inode를 씀
 			&& dir_add (dir, name, inode_sector)); // dir에 name이란 파일을 더함, file의 inode는 inode_sector안에 있다
 	if (!success && inode_sector != 0)
 		free_map_release (inode_sector, 1);
@@ -95,6 +98,7 @@ bool filesys_create (const char *name, off_t initial_size) {
 
 	return success;
 }
+
 
 /* Opens the file with the given NAME.
  * Returns the new file if successful or a null pointer
@@ -142,3 +146,103 @@ static void do_format (void) {
 
 	printf ("done.\n");
 }
+
+
+
+
+// ************************* P4-2 추가 ************************* //
+/* name 경로분석*/
+/* bitmap에서 inode sector 번호할당*/
+/* 할당받은 sector에file_name의디렉터리생성*/
+/* 디렉터리 엔트리에file_name의엔트리추가*/
+/* 디렉터리 엔트리에‘.’, ‘..’ 파일의엔트리추가*/
+bool filesys_create_dir(const char *name)
+{
+	bool success = false;
+
+	char file_name[NAME_MAX + 1];
+	struct dir *dir = parse_path(name, file_name);	// 상위 디렉터리는 dir 변수에 저장되고 파일 이름은 file_name 배열에 저장
+	if (dir == NULL) return false;	// parse_path 함수가 NULL을 반환하면 상위 디렉터리가 존재하지 않거나 오류가 발생
+
+	cluster_t inode_cluster = fat_create_chain(0);  //  디렉터리의 inode에 대한 새 클러스터를 생성
+	disk_sector_t inode_sector = cluster_to_sector(inode_cluster);
+
+}
+
+
+
+struct dir *parse_path(char *path_name, char *file_name)
+{
+	struct thread *curr = thread_current();
+	struct dir *dir;
+
+	char path[512];
+	strlcpy(path, path_name, strlen(path_name) + 1);
+
+	if (path == NULL || file_name == NULL) return NULL;
+	if (strlen(path) == 0) return NULL;
+
+	if (path[0] == '/')
+		dir = dir_open_root();
+	else
+		dir = dir_reopen(curr->curr_dir);
+
+	char *token, *next_token, *save_ptr;
+	token = strtok_r(path, "/", &save_ptr);
+	next_token = strtok_r(NULL, "/", &save_ptr);
+
+	struct inode *inode = NULL;
+	while (token != NULL && next_token != NULL)
+	{
+		if (!dir_lookup(dir, token, &inode))
+			goto fail;
+		if (inode_is_link(inode))
+		{
+			char *link_name = inode_get_link_name(inode);
+			strlcpy(path, link_name, strlen(link_name) + 1);
+
+			strlcat(path, "/", strlen(path) + 2);
+			strlcat(path, next_token, strlen(path) + strlen(next_token) + 1);
+			strlcat(path, save_ptr, strlen(path) + strlen(save_ptr) + 1);
+
+			dir_close(dir);
+
+			if (path[0] == '/')
+				dir = dir_open_root();
+			else
+				dir = dir_reopen(curr->curr_dir);
+
+			token = strtok_r(path, "/", &save_ptr);
+			next_token = strtok_r(NULL, "/", &save_ptr);
+
+			continue;
+		}
+
+		if (inode_is_dir(inode) == 0)
+			goto fail;
+
+		dir_close(dir);
+		dir = dir_open(inode);
+
+		token = next_token;
+		next_token = strtok_r(NULL, "/", &save_ptr);
+	}
+
+	if (token == NULL)
+		strlcpy(file_name, ".", 2);
+	else
+	{
+		if (strlen(token) > NAME_MAX)
+			goto fail;
+
+		strlcpy(file_name, token, strlen(token) + 1);
+	}
+	return dir;
+
+fail:
+	dir_close(dir);
+	return NULL;
+}
+
+
+

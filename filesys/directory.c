@@ -23,7 +23,7 @@ struct dir_entry {
  * given SECTOR.  Returns true if successful, false on failure. */
 bool
 dir_create (disk_sector_t sector, size_t entry_cnt) {
-	return inode_create (sector, entry_cnt * sizeof (struct dir_entry));
+	return inode_create (sector, entry_cnt * sizeof (struct dir_entry), 1);
 }
 
 /* Opens and returns the directory for the given INODE, of which
@@ -129,10 +129,10 @@ dir_add (struct dir *dir, const char *name, disk_sector_t inode_sector) {
 	off_t ofs;
 	bool success = false;
 
-	ASSERT (dir != NULL);
+	ASSERT (dir != NULL);		// 디렉토리, 이름이 없는지 확인
 	ASSERT (name != NULL);
 
-	/* Check NAME for validity. */
+	/* Check NAME for validity.(길이 체크) */  
 	if (*name == '\0' || strlen (name) > NAME_MAX)
 		return false;
 
@@ -214,4 +214,34 @@ dir_readdir (struct dir *dir, char name[NAME_MAX + 1]) {
 		}
 	}
 	return false;
+}
+
+
+// ************************* P4-2 추가 ************************* //
+struct dir *
+dir_open(struct inode *inode)
+{
+	if (inode_is_removed(inode) == true) return NULL;
+	struct dir *dir = calloc(1, sizeof *dir);
+
+	// inode, dir 둘 다 있으면 - dir 구조체 채워넣기
+	if (inode != NULL && dir != NULL) {
+		dir->inode = inode;
+		dir->pos = 0;
+		return dir;			// inode를 받아서 새로운 dir 구조체 리턴
+	}
+	// FAILED
+	else {
+		inode_close(inode);
+		free(dir);
+		return NULL;
+	}
+}
+
+
+
+struct dir *
+dir_reopen(struct dir *dir)
+{
+	return dir_open(inode_reopen(dir->inode));	// open_cnt만 ++해주고 사실상 dir_open으로 inode 리턴하는 것이 전부
 }
